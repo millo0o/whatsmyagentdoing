@@ -65,6 +65,8 @@
   const pick = (arr, h, salt) => arr[(Math.imul(h ^ Math.imul(salt, 2654435761), 2246822519) >>> 0) % arr.length];
   const rand = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // ?bare=1 (floating window): no floor or walls, just furniture and characters.
+  const BARE = new URLSearchParams(location.search).get('bare') === '1';
 
   // ---- Custom character sprites ----
   // Your own sheets go in assets/chars/ with a chars.json listing them; without
@@ -634,6 +636,7 @@
     }
 
     glassX(add, x, y, d) {
+      if (BARE) return;
       add(x + y + d / 2 + 0.02, () => {
         const P = (a, b, c) => this.iso(a, b, c);
         this.poly([P(x, y, 0), P(x, y + d, 0), P(x, y + d, 0.22), P(x, y, 0.22)], this.pal.trim);
@@ -642,6 +645,7 @@
     }
 
     glassY(add, x, y, w) {
+      if (BARE) return;
       add(x + w / 2 + y + 0.02, () => {
         const P = (a, b, c) => this.iso(a, b, c);
         this.poly([P(x, y, 0), P(x + w, y, 0), P(x + w, y, 0.22), P(x, y, 0.22)], this.pal.trim);
@@ -940,6 +944,7 @@
     // ------------------------------------------------------------ room shell
 
     drawRoom() {
+      if (BARE) return;
       const { W, D, OW, MR, PY, pp } = this.plan;
       const pal = this.pal;
       const P = (x, y, z) => this.iso(x, y, z);

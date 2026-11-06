@@ -66,7 +66,7 @@
   .seg button { border: 0; background: none; color: var(--muted); padding: 5px 12px; border-radius: 5px; font: inherit; font-size: 12.5px; cursor: pointer; }
   .seg button:hover:not(.on) { color: var(--ink); background: var(--bg); }
   .seg button.on { background: var(--ink); color: var(--bg); }
-  #qualSeg { border-color: transparent; background: transparent; }
+  #qualSeg { display: none !important; }
   #qualSeg button.on { background: var(--line); color: var(--ink); }
   .seg button small { opacity: .65; font-size: 11px; }
   label.tog { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
@@ -554,8 +554,11 @@ if (FLOAT) document.body.classList.add('float');
     } catch { /* malformed preferences use the saved defaults */ }
   }
   for (const k of ['view', 'quality', 'scene', 'lang']) if (validPreference(k, q.get(k))) store.set(k, q.get(k));
-  if (FLOAT) { store.set('view', 'office'); store.set('quality', 'mid'); store.set('side', false); }
-  if (location.search) history.replaceState(null, '', location.pathname + (PIP ? '?pip=1' : FLOAT ? '?float=1' : ''));
+  // Custom characters are 2D only, so the 3D office is turned off.
+  store.set('quality', 'mid');
+  if (FLOAT) { store.set('view', 'office'); store.set('side', false); }
+  const keep = PIP ? '?pip=1' : FLOAT ? '?float=1' + (q.get('bare') === '1' ? '&bare=1' : '') : '';
+  if (location.search) history.replaceState(null, '', location.pathname + keep);
 }
 
 const state = {
