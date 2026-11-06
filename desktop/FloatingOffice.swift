@@ -41,14 +41,26 @@ final class DragWebView: WKWebView {
   }
 }
 
+// Keep the whole window (and its resize corner) on the visible screen.
+func fitOnScreen(_ r: NSRect) -> NSRect {
+  let mid = NSPoint(x: r.midX, y: r.midY)
+  let vis = (NSScreen.screens.first { $0.frame.contains(mid) } ?? NSScreen.main)?.visibleFrame ?? r
+  var f = r
+  f.size.width = min(f.width, vis.width)
+  f.size.height = min(f.height, vis.height)
+  f.origin.x = min(max(f.minX, vis.minX), vis.maxX - f.width)
+  f.origin.y = min(max(f.minY, vis.minY), vis.maxY - f.height)
+  return f
+}
+
 // Bottom-right corner: drag to resize (keeps the top-left corner in place).
 final class ResizeGrip: NSView {
   override func draw(_ dirtyRect: NSRect) {
-    NSColor(calibratedRed: 0.42, green: 0.29, blue: 0.23, alpha: 0.55).setStroke()
+    NSColor(calibratedRed: 0.42, green: 0.29, blue: 0.23, alpha: 0.8).setStroke()
     for i in 0..<3 {
       let o = CGFloat(i) * 5 + 4
       let p = NSBezierPath()
-      p.lineWidth = 1.6
+      p.lineWidth = 2.2
       p.lineCapStyle = .round
       p.move(to: NSPoint(x: bounds.maxX - o, y: 3))
       p.line(to: NSPoint(x: bounds.maxX - 3, y: o))
@@ -65,7 +77,7 @@ final class ResizeGrip: NSView {
       let now = NSEvent.mouseLocation
       let w = max(260, startFrame.width + (now.x - start.x))
       let h = max(200, startFrame.height - (now.y - start.y))
-      win.setFrame(NSRect(x: startFrame.minX, y: startFrame.maxY - h, width: w, height: h), display: true)
+      win.setFrame(fitOnScreen(NSRect(x: startFrame.minX, y: startFrame.maxY - h, width: w, height: h)), display: true)
     }
   }
 }
@@ -103,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     panel.isMovableByWindowBackground = true
     panel.hidesOnDeactivate = false
     panel.setFrameAutosaveName("FloatingOffice")
+    panel.setFrame(fitOnScreen(panel.frame), display: false)
 
     let config = WKWebViewConfiguration()
     let root = NSView(frame: panel.contentView!.bounds)
@@ -173,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var f = panel.frame
     f.origin.y += f.height - h
     f.size = NSSize(width: w, height: h)
-    panel.setFrame(f, display: true, animate: true)
+    panel.setFrame(fitOnScreen(f), display: true, animate: true)
   }
   @objc func small() { resize(560, 420) }
   @objc func medium() { resize(900, 680) }
