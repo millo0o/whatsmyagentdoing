@@ -107,6 +107,13 @@ Mac 앱과 같은 투명 창이에요. [Node.js](https://nodejs.org) 18 이상�
 
 Mac에서도 이 앱을 쓸 수 있어요(`cd desktop/windows && npm install && npm start`).
 
+## 업데이트
+
+새 버전이 GitHub에 올라오면 떠다니는 창 왼쪽 위에 빨간 **⬆ 새 버전** 버튼이 떠요(30분마다 확인).
+브라우저 화면에서는 툴바 제목 옆에 나와요. 누르면 알아서 내려받고 다시 켜져요.
+직접 하려면 `cd ~/.claude/skills/myoffice && git pull` 을 실행해요.
+Mac 떠다니는 창 앱 자체가 바뀐 업데이트라면 `desktop/build.sh` 를 한 번 다시 실행해요.
+
 ## 바뀐 점 (원본과 비교)
 
 - 2D 오피스 라이트 모드가 파스텔 배경, 물방울 벽지, 갈색 외곽선 스타일이에요.

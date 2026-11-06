@@ -60,7 +60,10 @@ node "$env:USERPROFILE\.claude\skills\myoffice\bin\cli.js"
 
 ## 업데이트
 
-PowerShell에서 아래를 실행한 뒤, 떠다니는 창을 껐다 켜요.
+새 버전이 GitHub에 올라오면 떠다니는 창 왼쪽 위에 빨간 **⬆ 새 버전** 버튼이 떠요(30분마다 확인).
+누르면 알아서 내려받고 다시 켜져요. ZIP으로 받았다면 이 버튼이 안 나오니 ZIP을 새로 받아 덮어써요.
+
+직접 하려면 PowerShell에서 아래를 실행한 뒤, 떠다니는 창을 껐다 켜요.
 
 ```powershell
 cd "$env:USERPROFILE\.claude\skills\myoffice"; git pull
