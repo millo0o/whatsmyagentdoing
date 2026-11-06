@@ -383,6 +383,14 @@
     position: fixed; z-index: 30; top: 8px; left: 8px; right: 8px; margin: 0; padding: 6px 10px;
     background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
   }
+  /* Floating window: no title, toolbar hugs the right edge, and keep the button
+     labels until the window is really narrow. */
+  body.float header h1, body.float .summary { display: none !important; }
+  body.float header { left: auto; max-width: calc(100vw - 16px); }
+  @media (min-width: 560px) {
+    html body.float .today-tokens, html body.float #langName,
+    html body.float #todayMenu > summary [data-t], html body.float #settingsMenu > summary [data-t] { display: revert; }
+  }
   .float-stats { display: none; }
   body.float .float-stats {
     display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; align-items: center;
@@ -394,7 +402,7 @@
   body.float .float-stats b { font-weight: 800; }
   body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
   body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 1.1em; height: 1.1em; }
-  html:hover body.float .float-stats { top: 58px; }
+  html:hover body.float .float-stats { top: 100px; }
   /* Agent panel open: keep the badge off its header (back/close buttons). */
   html:hover body.float:not(.side-closed) .float-stats { right: calc(min(340px, 88vw) + 10px); max-width: calc(100vw - min(340px, 88vw) - 20px); }
   @media (max-width: 620px) { html:hover body.float:not(.side-closed) .float-stats { display: none; } }
