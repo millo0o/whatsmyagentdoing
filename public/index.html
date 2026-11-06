@@ -370,6 +370,12 @@
   body.pip .controls { width: auto; padding: 0; border: 0; }
   body.pip .chip { padding: 2px 6px; font-size: 11px; }
   body.pip .summary { gap: 4px; width: auto; margin-left: 0; }
+  html:has(body.float), body.float { background: transparent !important; overflow: hidden; }
+  body.float { padding: 0 !important; margin: 0; }
+  body.float header, body.float .side, body.float .side-tab, body.float .legend,
+  body.float .ver, body.float .conn, body.float #main, body.float .pip-preview { display: none !important; }
+  body.float #officeWrap { position: fixed; inset: 0; }
+  body.float .office { height: 100vh !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
   body.pip #officeWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   body.pip .office { flex: 1; height: auto; min-height: 120px; }
   body.pip #main { overflow: auto; min-height: 0; }
@@ -535,6 +541,9 @@ function readPreferences() {
 }
 const PIP = new URLSearchParams(location.search).get('pip') === '1';
 if (PIP) document.body.classList.add('pip');
+// ?float=1: just the room on a transparent page, for the desktop floating window.
+const FLOAT = new URLSearchParams(location.search).get('float') === '1';
+if (FLOAT) document.body.classList.add('float');
 
 // ?view=office&quality=high&scene=pirate (what `--scene` opens) sets the prefs.
 {
@@ -545,7 +554,8 @@ if (PIP) document.body.classList.add('pip');
     } catch { /* malformed preferences use the saved defaults */ }
   }
   for (const k of ['view', 'quality', 'scene', 'lang']) if (validPreference(k, q.get(k))) store.set(k, q.get(k));
-  if (location.search) history.replaceState(null, '', location.pathname + (PIP ? '?pip=1' : ''));
+  if (FLOAT) { store.set('view', 'office'); store.set('quality', 'mid'); store.set('side', false); }
+  if (location.search) history.replaceState(null, '', location.pathname + (PIP ? '?pip=1' : FLOAT ? '?float=1' : ''));
 }
 
 const state = {
