@@ -1697,8 +1697,25 @@
         const ph = workPhase(s);
         if (ph && (st === 'thinking' || st === 'typing' || st === 'tool')) {
           // Phase label with animated dots, e.g. "💻 개발 중…"
+          // Icon gets its own fixed slot (emoji measure unreliably), and the
+          // width is set for "..." so the pill doesn't jitter as the dots move.
           const dots = '.'.repeat(1 + (Math.floor(t * 2.5) % 3));
-          top = pill(`${ph.icon} ${ph.text}${dots}`, '#fff', col, y - 12 - Math.abs(Math.sin(t * 2)) * 1.5);
+          const yy = y - 12 - Math.abs(Math.sin(t * 2)) * 1.5;
+          c.font = font(700, 10);
+          const ICON = 14, tw = c.measureText(ph.text + '...').width;
+          const w = 8 + ICON + 3 + tw + 8, h = 17, x0 = x - w / 2;
+          this.roundRect(x0, yy - h / 2, w, h, 8.5, col);
+          c.textAlign = 'center';
+          c.font = font(400, 11);
+          c.fillStyle = '#fff';
+          c.fillText(ph.icon, x0 + 8 + ICON / 2, yy + 0.5);
+          c.textAlign = 'left';
+          c.font = font(700, 10);
+          c.fillStyle = '#fff';
+          c.fillText(ph.text + dots, x0 + 8 + ICON + 3, yy + 0.5);
+          c.textAlign = 'center';
+          c.font = font(600, 10);
+          top = yy - 8;
         } else if (st === 'thinking') {
           c.fillStyle = pal.bubble;
           c.beginPath(); c.arc(x + 6, y - 2, 2, 0, Math.PI * 2); c.fill();
