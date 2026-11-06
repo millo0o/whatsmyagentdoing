@@ -985,6 +985,8 @@ const officeOpts = {
   onHover(s, at, click) {
     // In full screen a click opens the agent in the side panel instead of pinning a card.
     if (click && state.full && s) { hideTip(); openDetail(s.key); return; }
+    // Clicking empty office space closes the agent panel.
+    if (click && state.full && !s && state.side) { setSide(false); return; }
     if (click) {
       if (!s) return hideTip();
       tipPinned = true; tip.classList.add('pinned');
@@ -1376,6 +1378,12 @@ async function loadConvo(s) {
 }
 
 document.getElementById('sideHide').addEventListener('click', () => setSide(false));
+// ...and so does clicking anywhere else outside it (the office canvas handles its own clicks).
+document.addEventListener('click', (e) => {
+  if (!state.full || !state.side || !e.target.closest) return;
+  if (e.target.closest('.side, .side-tab, canvas, header, details, .tip, button, a, input, select')) return;
+  setSide(false);
+});
 document.getElementById('sideTab').addEventListener('click', () => setSide(true));
 document.getElementById('sideBack').addEventListener('click', closeDetail);
 document.getElementById('sideRows').addEventListener('mouseleave', (e) => { if (e.currentTarget.dataset.stale) renderSide(); });

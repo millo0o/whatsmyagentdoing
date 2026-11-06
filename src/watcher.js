@@ -77,12 +77,38 @@ function readRange(file, start, end, decoder) {
   }
 }
 
-function claudeFiles() {
+// Conversations deleted or archived in the Claude desktop app keep their log
+// file; the app only leaves a "deleted_<id>" marker or sets isArchived.
+const CLAUDE_APP_SESSIONS = path.join(
+  process.platform === 'win32' ? (process.env.APPDATA || path.join(home, 'AppData', 'Roaming'))
+    : process.platform === 'darwin' ? path.join(home, 'Library', 'Application Support') : (process.env.XDG_CONFIG_HOME || path.join(home, '.config')),
+  'Claude', 'claude-code-sessions');
+function claudeHiddenIds() {
+  const hidden = new Set();
+  const walk = (dir, depth) => {
+    for (const e of ls(dir)) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { if (depth < 3) walk(f, depth + 1); continue; }
+      if (e.name.startsWith('deleted_')) hidden.add(e.name.slice(8));
+      else if (e.name.startsWith('local_') && e.name.endsWith('.json')) {
+        try {
+          const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+          if (j.isArchived && j.cliSessionId) hidden.add(j.cliSessionId);
+        } catch { /* half-written; next walk */ }
+      }
+    }
+  };
+  walk(CLAUDE_APP_SESSIONS, 0);
+  return hidden;
+}
+
+function claudeFiles(hidden = new Set()) {
   const out = [];
   for (const proj of ls(CLAUDE_DIR)) {
     if (!proj.isDirectory()) continue;
     const pdir = path.join(CLAUDE_DIR, proj.name);
     for (const e of ls(pdir)) {
+      if ((e.isFile() && hidden.has(e.name.slice(0, -6))) || (e.isDirectory() && hidden.has(e.name))) continue;
       if (e.isFile() && e.name.endsWith('.jsonl')) {
         out.push({ agent: 'claude', file: path.join(pdir, e.name), id: e.name.slice(0, -6) });
       } else if (e.isDirectory()) {
@@ -377,7 +403,8 @@ class Watcher extends EventEmitter {
     // Directory walk every 5s; stat known files every tick.
     if (now - this.lastScan > 5000) {
       this.lastScan = now;
-      this.candidates = [...claudeFiles(), ...codexFiles(since), ...geminiFiles(), ...copilotFiles(),
+      this.hidden = claudeHiddenIds();
+      this.candidates = [...claudeFiles(this.hidden), ...codexFiles(since), ...geminiFiles(), ...copilotFiles(),
         ...clientFiles(CLIENT_DIRS, since), ...ompFiles(since, ompDirs(this.ompDir, process.env, home, process.platform)),
         ...antigravityFiles(since)];
       // These have no file to tail, so they refresh with the walk.
@@ -406,6 +433,15 @@ class Watcher extends EventEmitter {
       }
     }
 
+    // Drop sessions whose log is gone (deleted/archived/moved) or that the
+    // Claude app now lists as deleted.
+    const listed = new Set(this.candidates.map((c) => c.file));
+    for (const [file, t] of this.trackers) {
+      if (!listed.has(file) && !statSafe(file)) { this.trackers.delete(file); changed = true; continue; }
+      if (t.session.agent === 'claude' && this.hidden && (this.hidden.has(t.session.id) || this.hidden.has(t.session.parentId))) {
+        this.trackers.delete(file); changed = true; continue;
+      }
+    }
     for (const [file, t] of this.trackers) {
       const activity = t.session.agent === 'omp' ? Math.max(t.session.lastEventAt || 0, t.session.mtime || 0) : (t.session.lastEventAt || t.session.mtime || 0);
       if (activity < since) { this.trackers.delete(file); changed = true; }
