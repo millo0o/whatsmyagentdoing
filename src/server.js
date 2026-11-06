@@ -195,12 +195,20 @@ function createServer(watcher, opts, { onShutdown, onRestart } = {}) {
     } else if (url.pathname === '/api/float' && req.method === 'POST') {
       // Pop out into the floating desktop app (desktop/build.sh), if it's built.
       // Same custom-header guard as shutdown, so other sites can't trigger it.
+      // Mac: the Swift app. Windows/Linux (or Mac without it): the Electron app in desktop/windows.
       const appPath = path.join(require('os').homedir(), 'Applications', 'Floating Office.app');
-      if (req.headers['x-whatsmyagentdoing'] !== 'float' || process.platform !== 'darwin' || !fs.existsSync(appPath)) {
+      const winDir = path.join(__dirname, '..', 'desktop', 'windows');
+      const exe = process.platform === 'win32' ? 'electron.exe'
+        : process.platform === 'darwin' ? path.join('Electron.app', 'Contents', 'MacOS', 'Electron') : 'electron';
+      const electron = path.join(winDir, 'node_modules', 'electron', 'dist', exe);
+      const mac = process.platform === 'darwin' && fs.existsSync(appPath);
+      if (req.headers['x-whatsmyagentdoing'] !== 'float' || (!mac && !fs.existsSync(electron))) {
         res.writeHead(404).end();
         return;
       }
-      require('child_process').spawn('open', [appPath], { stdio: 'ignore', detached: true }).unref();
+      const cp = require('child_process');
+      if (mac) cp.spawn('open', [appPath], { stdio: 'ignore', detached: true }).unref();
+      else cp.spawn(electron, [winDir], { stdio: 'ignore', detached: true, windowsHide: false }).unref();
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     } else if (url.pathname === '/api/shutdown' && req.method === 'POST') {
