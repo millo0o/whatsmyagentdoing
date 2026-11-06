@@ -407,15 +407,14 @@
   body.float .float-stats b { font-weight: 800; }
   body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
   body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 1.1em; height: 1.1em; }
-  /* On hover the toolbar takes the top rows and the office moves down beneath it,
-     so nothing covers the room: row 1 toolbar, row 2 token badge (left) and agent tab (right). */
+  /* The window keeps a see-through strip on top for the toolbar (row 1) and the
+     token badge + agent tab (row 2), so they never cover the room. */
   html:hover body.float .float-stats { top: 64px; left: 10px; right: auto; justify-content: flex-start; max-width: calc(100vw - 150px); }
-  html:hover body.float #officeWrap { top: 104px; }
   /* Agent panel open: keep the badge off its header (back/close buttons). */
   html:hover body.float:not(.side-closed) .float-stats { max-width: calc(100vw - min(340px, 88vw) - 20px); }
   @media (max-width: 620px) { html:hover body.float:not(.side-closed) .float-stats { display: none; } }
   body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
-  body.float #officeWrap { position: fixed; inset: 0; }
+  body.float #officeWrap { position: fixed; inset: 104px 0 0 0; }
   body.float .office { height: 100% !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
   body.pip #officeWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   body.pip .office { flex: 1; height: auto; min-height: 120px; }

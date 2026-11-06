@@ -881,7 +881,9 @@
       // Floating window: fill it edge to edge, and tell the app the room's shape.
       const pad = FLOATWIN ? 8 : 30;
       const zoom = Math.min(vw / (right - left + pad), this.ch / (bottom - top + pad), FLOATWIN ? 8 : 2);
-      const aspect = (right - left + pad) / (bottom - top + pad);
+      // The app sizes the whole window, which also holds the toolbar strip above the room.
+      const strip = FLOATWIN ? this.root.getBoundingClientRect().top : 0;
+      const aspect = Math.round(innerWidth / (innerWidth * (bottom - top + pad) / (right - left + pad) + strip) * 1000) / 1000;
       if (FLOATWIN && aspect !== this.sentAspect) {
         this.sentAspect = aspect;
         try { window.webkit.messageHandlers.aspect.postMessage(aspect); } catch { /* not in the app */ }
