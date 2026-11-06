@@ -73,6 +73,28 @@
   // Turns status + current tool ("Bash: npm test", "Edit app.css", ...) into a
   // human phase like 기획 중 / 디자인 중 / 개발 중 / 검수 중.
   const DESIGN_EXT = /\.(css|scss|sass|less|svg|png|jpe?g|webp|gif|fig|sketch|html?)\b|design|figma|style|theme|color|font/i;
+  // Emoji are measured and drawn differently by each browser engine (Safari draws
+  // some wider than it measures), so each icon is drawn once, trimmed to its
+  // visible pixels, and then placed as an image in a fixed square.
+  const ICON_CACHE = new Map();
+  function emojiIcon(e) {
+    if (ICON_CACHE.has(e)) return ICON_CACHE.get(e);
+    const S = 64, cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const g = cv.getContext('2d');
+    g.font = '44px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+    g.fillText(e, S / 2, S / 2 + 2);
+    const d = g.getImageData(0, 0, S, S).data;
+    let x0 = S, y0 = S, x1 = -1, y1 = -1;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      if (d[(y * S + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    const icon = x1 < 0 ? null : { cv, x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+    ICON_CACHE.set(e, icon);
+    return icon;
+  }
+
   function workPhase(s) {
     const st = s.status, a = String(s.activity || ''), al = a.toLowerCase();
     if (st === 'waiting') return { icon: '🙋', text: '확인 요청' };
@@ -731,12 +753,14 @@
         p.s = s;
         p.leaving = false;
         if (isWorker) {
+          if (p.shift) { if (p.desk && p.desk.npcWorker === p.key) p.desk.npcWorker = null; p.shift = false; }
           this.release(p);
           const desk = desks[this.deskOf.get(s.key)];
           if (p.desk !== desk || p.mode !== 'work') { p.desk = desk; this.goTo(p, desk.seat); }
           p.mode = 'work';
         } else {
-          if (p.mode !== 'wander') { p.mode = 'wander'; p.desk = null; p.poi = null; p.until = 0; }
+          if (p.shift && p.mode === 'work') { if (!p.desk || takenDesks.has(p.desk)) this.endShift(p, Date.now()); }
+          else if (p.mode !== 'wander') { p.mode = 'wander'; p.desk = null; p.poi = null; p.until = 0; p.shift = false; }
           // Someone started working at the desk this one was napping on.
           if (p.napDesk && takenDesks.has(p.napDesk)) { this.release(p); p.path = []; }
         }
@@ -764,7 +788,8 @@
             this.people.set(key, p);
           }
           p.leaving = false;
-          if (p.mode !== 'wander') { p.mode = 'wander'; p.desk = null; p.poi = null; p.until = 0; }
+          if (p.mode === 'work' && (!p.desk || takenDesks.has(p.desk))) this.endShift(p, Date.now());
+          else if (p.mode !== 'wander' && p.mode !== 'work') { p.mode = 'wander'; p.desk = null; p.poi = null; p.until = 0; }
         }
       }
       for (const [k, p] of this.people) {
@@ -808,6 +833,49 @@
       p.path = this.plan.grid.path(p.x, p.y, target.x, target.y);
     }
 
+    // Extras take turns working: now and then one sits at a free desk and types
+    // for a while, then goes back to wandering. Real sessions always win a desk.
+    npcShifts(now) {
+      if (!CHARS.length || now < (this.nextShiftCheck || 0)) return;
+      this.nextShiftCheck = now + 1000;
+      const desks = this.plan.desks;
+      const real = new Set([...this.deskOf.values()].map((i) => desks[i]));
+      const busy = new Set(real);
+      // Extras, and real sessions that are idle or done (they'd only wander otherwise).
+      const npcs = [...this.people.values()].filter((p) => p.s && !p.leaving && (p.s.npc || !WORKING.has(p.s.status)) && (p.mode !== 'work' || p.shift));
+      for (const p of npcs) {
+        if (p.mode !== 'work') continue;
+        if (!p.desk || real.has(p.desk) || now > p.shiftEnd) this.endShift(p, now);
+        else busy.add(p.desk);
+      }
+      // Keep a desk free for real sessions, and at most ~half the extras at work.
+      const free = desks.filter((d) => !busy.has(d) && !d.napper && d.pose !== 'stand');
+      let room = Math.min(free.length - 1, Math.ceil(npcs.length / 2) - npcs.filter((p) => p.mode === 'work').length);
+      for (const p of npcs) {
+        if (room <= 0) break;
+        if (p.mode !== 'wander' || p.path.length || now < (p.nextShift ??= now + rand(3, 25) * 1000)) continue;
+        const d = free.splice(Math.floor(Math.random() * free.length), 1)[0];
+        if (!d) break;
+        this.release(p);
+        if (p.napDesk) { p.napDesk.napper = null; p.napDesk = null; }
+        p.mode = 'work';
+        p.shift = true;
+        p.desk = d;
+        d.npcWorker = p.key;
+        p.shiftEnd = now + rand(30, 90) * 1000;
+        this.goTo(p, d.seat);
+        room--;
+      }
+    }
+
+    endShift(p, now) {
+      if (p.desk && p.desk.npcWorker === p.key) p.desk.npcWorker = null;
+      p.mode = 'wander';
+      p.shift = false;
+      p.desk = null; p.poi = null; p.until = 0;
+      p.nextShift = now + rand(20, 60) * 1000;
+    }
+
     wander(p, now) {
       if (p.path.length) return;
       if (p.poi && now < p.until) return;
@@ -824,7 +892,7 @@
         weighted.push([q, w]);
       }
       for (const d of plan.noNap ? [] : plan.desks) {
-        if (workingDesks.has(d) || d.napper) continue;
+        if (workingDesks.has(d) || d.napper || d.npcWorker) continue;
         weighted.push([{ x: d.seat.x, y: d.seat.y, act: 'nap', face: d.side === 'n' ? 'front' : 'back', sit: 0.34, desk: d }, sleepy ? 3 : 0.25]);
       }
       if (!weighted.length) return;
@@ -1443,7 +1511,7 @@
         const face = p.desk.side === 'n' ? 'front' : 'back';
         if (s.status === 'waiting' || s.status === 'error') return { pose: 'stand', face, act: 'wave', sitZ: 0 };
         if (p.desk.pose === 'stand') return { pose: 'stand', face, act: 'station', sitZ: 0 };
-        return { pose: 'sit', face, act: s.status === 'tool' || s.status === 'typing' ? 'type' : 'think', sitZ: 0.34 };
+        return { pose: 'sit', face, act: p.shift || s.status === 'tool' || s.status === 'typing' ? 'type' : 'think', sitZ: 0.34 };
       }
       if (p.mode === 'wander' && p.poi) {
         const q = p.poi;
@@ -1705,10 +1773,11 @@
           const ICON = 14, tw = c.measureText(ph.text + '...').width;
           const w = 8 + ICON + 3 + tw + 8, h = 17, x0 = x - w / 2;
           this.roundRect(x0, yy - h / 2, w, h, 8.5, col);
-          c.textAlign = 'center';
-          c.font = font(400, 11);
-          c.fillStyle = '#fff';
-          c.fillText(ph.icon, x0 + 8 + ICON / 2, yy + 0.5);
+          const ic = emojiIcon(ph.icon);
+          if (ic) {
+            const k = 12 / Math.max(ic.w, ic.h), iw = ic.w * k, ih = ic.h * k;
+            c.drawImage(ic.cv, ic.x, ic.y, ic.w, ic.h, x0 + 8 + (ICON - iw) / 2, yy - ih / 2, iw, ih);
+          }
           c.textAlign = 'left';
           c.font = font(700, 10);
           c.fillStyle = '#fff';
@@ -1893,6 +1962,7 @@
     // Advance people and the cat; shared by the 2D and 3D renderers.
     step(dt) {
       const wall = Date.now();
+      this.npcShifts(wall);
       for (const [k, p] of this.people) {
         if (p.mode === 'wander') {
           if (p.poi && !p.path.length && p.until === Infinity) p.until = wall + p.stay;
