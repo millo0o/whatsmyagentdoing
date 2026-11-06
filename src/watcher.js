@@ -29,7 +29,15 @@ const home = os.homedir();
 const CLAUDE_DIR = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(home, '.claude'), 'projects');
 const CODEX_HOME = process.env.CODEX_HOME || path.join(home, '.codex');
 const CODEX_DIR = path.join(CODEX_HOME, 'sessions');
-const CODEX_INDEX = path.join(CODEX_HOME, 'session_index.jsonl');
+// Several Codex apps/accounts can run side by side, each with its own home
+// (e.g. ~/.codex-work). Read every ~/.codex-* that has a sessions folder too.
+const CODEX_HOMES = [...new Set([CODEX_HOME, ...(() => {
+  try {
+    return fs.readdirSync(home, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && /^\.codex-/.test(d.name) && fs.existsSync(path.join(home, d.name, 'sessions')))
+      .map((d) => path.join(home, d.name));
+  } catch { return []; }
+})()])];
 // Gemini CLI: ~/.gemini (or $GEMINI_CLI_HOME/.gemini); sandboxed runs on
 // macOS keep their state under ~/.cache/.gemini instead.
 const GEMINI_HOMES = [
@@ -121,13 +129,15 @@ function codexFiles(sinceMs) {
   // Check mtime here to keep inactive history out of the 1s polling list;
   // only the 5s discovery scan stats those files, without reading their logs.
   const out = [];
-  for (const y of ls(CODEX_DIR)) {
+  for (const codexHome of CODEX_HOMES) {
+  const root = path.join(codexHome, 'sessions');
+  for (const y of ls(root)) {
     if (!y.isDirectory()) continue;
-    for (const m of ls(path.join(CODEX_DIR, y.name))) {
+    for (const m of ls(path.join(root, y.name))) {
       if (!m.isDirectory()) continue;
-      for (const d of ls(path.join(CODEX_DIR, y.name, m.name))) {
+      for (const d of ls(path.join(root, y.name, m.name))) {
         if (!d.isDirectory()) continue;
-        const dir = path.join(CODEX_DIR, y.name, m.name, d.name);
+        const dir = path.join(root, y.name, m.name, d.name);
         for (const f of ls(dir)) {
           if (!f.isFile() || !f.name.endsWith('.jsonl')) continue;
           const file = path.join(dir, f.name);
@@ -138,6 +148,7 @@ function codexFiles(sinceMs) {
         }
       }
     }
+  }
   }
   return out;
 }
@@ -274,17 +285,23 @@ class Watcher extends EventEmitter {
   stop() { clearInterval(this.timer); for (const source of this.magpies) source.stop(); }
 
   loadCodexIndex() {
-    const st = statSafe(CODEX_INDEX);
-    if (!st || st.mtimeMs === this.codexIndexMtime) return false;
-    this.codexIndexMtime = st.mtimeMs;
-    const start = Math.max(0, st.size - 2 * 1024 * 1024);
-    for (const line of readRange(CODEX_INDEX, start, st.size).split('\n')) {
-      try {
-        const d = JSON.parse(line);
-        if (d.id && d.thread_name) this.codexNames.set(d.id, d.thread_name);
-      } catch {}
+    this.codexIndexMtimes = this.codexIndexMtimes || new Map();
+    let changed = false;
+    for (const codexHome of CODEX_HOMES) {
+      const index = path.join(codexHome, 'session_index.jsonl');
+      const st = statSafe(index);
+      if (!st || st.mtimeMs === this.codexIndexMtimes.get(index)) continue;
+      this.codexIndexMtimes.set(index, st.mtimeMs);
+      changed = true;
+      const start = Math.max(0, st.size - 2 * 1024 * 1024);
+      for (const line of readRange(index, start, st.size).split('\n')) {
+        try {
+          const d = JSON.parse(line);
+          if (d.id && d.thread_name) this.codexNames.set(d.id, d.thread_name);
+        } catch {}
+      }
     }
-    return true;
+    return changed;
   }
 
   loadAntigravityHistory() {

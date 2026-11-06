@@ -69,6 +69,33 @@
   const BARE = new URLSearchParams(location.search).get('bare') === '1';
   const FLOATWIN = new URLSearchParams(location.search).get('float') === '1';
 
+  // ---- Work phase shown above a working agent ----
+  // Turns status + current tool ("Bash: npm test", "Edit app.css", ...) into a
+  // human phase like 기획 중 / 디자인 중 / 개발 중 / 검수 중.
+  const DESIGN_EXT = /\.(css|scss|sass|less|svg|png|jpe?g|webp|gif|fig|sketch|html?)\b|design|figma|style|theme|color|font/i;
+  function workPhase(s) {
+    const st = s.status, a = String(s.activity || ''), al = a.toLowerCase();
+    if (st === 'waiting') return { icon: '🙋', text: '확인 요청' };
+    if (st === 'error') return { icon: '😵', text: '막힘' };
+    if (st === 'typing') return { icon: '✍️', text: '보고 중' };
+    if (st === 'thinking') return { icon: '💭', text: '기획 중' };
+    if (st !== 'tool') return null;
+    const tool = al.split(/[:\s·]/)[0];
+    if (/^(read|grep|glob|ls|search|websearch|webfetch|fetch|find|view|list|cat)/.test(tool) || /search|fetch|get_page_text|read_page|query/.test(al)) return { icon: '🔍', text: '조사 중' };
+    if (/^(task|agent|subagent)/.test(tool)) return { icon: '🤝', text: '협업 중' };
+    if (/^(todo|plan|update_plan|exitplanmode|enterplanmode)/.test(tool) || /update_plan|todo/.test(al)) return { icon: '📝', text: '기획 중' };
+    if (/^(edit|write|multiedit|apply_patch|notebookedit|patch|create|str_replace)/.test(tool) || /apply_patch/.test(al))
+      return DESIGN_EXT.test(a) ? { icon: '🎨', text: '디자인 중' } : { icon: '💻', text: '개발 중' };
+    if (/screenshot|playwright|browser|preview|simulator|zoom|computer/.test(al)) return { icon: '👀', text: '화면 검수 중' };
+    if (/generate_image|image|draw|render/.test(al)) return { icon: '🎨', text: '디자인 중' };
+    if (/\b(test|tests|jest|vitest|pytest|lint|eslint|tsc|typecheck|check|verify|--check|spec)\b/.test(al)) return { icon: '✅', text: '검수 중' };
+    if (/\b(git (commit|push)|gh pr|deploy|publish|release|vercel|wrangler)\b/.test(al)) return { icon: '🚀', text: '배포 중' };
+    if (/\b(install|brew|pip|npm i|yarn add|pnpm add|setup|mkdir|clone)\b/.test(al)) return { icon: '🔧', text: '세팅 중' };
+    if (/\b(build|compile|swiftc|make|bundle)\b/.test(al)) return { icon: '🏗️', text: '빌드 중' };
+    if (/^(bash|shell|exec|exec_command|run|terminal)/.test(tool)) return { icon: '⚙️', text: '작업 중' };
+    return { icon: '⚙️', text: '작업 중' };
+  }
+
   // ---- Custom character sprites ----
   // Your own sheets go in assets/chars/ with a chars.json listing them; without
   // one, the example characters in assets/chars-example/ are used. Each entry is
@@ -1659,7 +1686,12 @@
       let top = y;
       if (p.mode === 'work' && !p.path.length) {
         const col = STATUS_COLOR[st] || '#888';
-        if (st === 'thinking') {
+        const ph = workPhase(s);
+        if (ph && (st === 'thinking' || st === 'typing' || st === 'tool')) {
+          // Phase label with animated dots, e.g. "💻 개발 중…"
+          const dots = '.'.repeat(1 + (Math.floor(t * 2.5) % 3));
+          top = pill(`${ph.icon} ${ph.text}${dots}`, '#fff', col, y - 12 - Math.abs(Math.sin(t * 2)) * 1.5);
+        } else if (st === 'thinking') {
           c.fillStyle = pal.bubble;
           c.beginPath(); c.arc(x + 6, y - 2, 2, 0, Math.PI * 2); c.fill();
           c.beginPath(); c.arc(x + 10, y - 7, 3, 0, Math.PI * 2); c.fill();

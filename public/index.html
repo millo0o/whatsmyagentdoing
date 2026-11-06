@@ -383,6 +383,18 @@
     position: fixed; z-index: 30; top: 8px; left: 8px; right: 8px; margin: 0; padding: 6px 10px;
     background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
   }
+  .float-stats { display: none; }
+  body.float .float-stats {
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; align-items: center;
+    position: fixed; z-index: 29; top: 8px; right: 10px; max-width: 70%; padding: 4px 10px;
+    font-size: 11px; color: #5b4032; background: rgba(255, 250, 243, .9); border: 1.5px solid #e2c6b2;
+    border-radius: 999px; box-shadow: 0 2px 8px #6b4a3a1f; transition: top .2s;
+  }
+  body.float .float-stats[hidden] { display: none; }
+  body.float .float-stats b { font-weight: 800; }
+  body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
+  body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 12px; height: 12px; }
+  html:hover body.float .float-stats { top: 58px; }
   body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
   body.float #officeWrap { position: fixed; inset: 0; }
   body.float .office { height: 100vh !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
@@ -479,6 +491,7 @@
   <main id="main"></main>
 </div>
 <div class="conn" id="conn" data-t="disconnected"></div>
+<div class="float-stats" id="floatStats" hidden></div>
 <div class="tip" id="tip"></div>
 <div class="ver" id="ver"></div>
 <script src="/i18n.js"></script>
@@ -662,6 +675,15 @@ function contextBar(c) {
 
 function renderToday() {
   const t = state.data.summary;
+  if (FLOAT) {
+    // Always-visible stats in the floating window's top-right corner.
+    const el = document.getElementById('floatStats');
+    const by = t && t.byAgent ? Object.entries(t.byAgent).sort((a, b) => b[1].tokens - a[1].tokens) : [];
+    el.innerHTML = t && t.turns ? `
+      <div class="fs-main"><b>${t.turns}</b> ${esc(L.turnsL)} · <b>${fmtTokens(t.tokens)}</b> ${esc(L.tokensL)} · <b>${t.agents}</b> ${esc(L.agentsL)}</div>
+      ${by.map(([a, v]) => `<div class="fs-row">${agentLogo(a)}<span>${fmtTokens(v.tokens)}</span></div>`).join('')}` : '';
+    el.hidden = !(t && t.turns);
+  }
   document.getElementById('todayTokens').textContent = t && t.tokens ? fmtTokens(t.tokens) : '';
   const panel = document.getElementById('todayPanel');
   if (!t || !t.agents) { panel.innerHTML = `<div class="today-note">${esc(L.noUsage)}</div>`; return; }
