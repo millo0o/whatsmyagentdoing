@@ -607,9 +607,9 @@
         if (XMAS && low) {
           const tx = OW - 1.6, ty = fy + 0.7;
           add(tx + ty + 0.3, () => this.xmasTree(tx, ty));
-          solid(tx - 0.55, ty - 0.55, 1.1, 1.1, 0.05);
-          poi(tx - 1.0, ty + 0.9, 'xmas', 'back', { w: 1.5 });
-          poi(tx + 0.9, ty + 0.9, 'xmas', 'back', { w: 1.5 });
+          solid(tx - 0.8, ty - 0.8, 1.6, 1.6, 0.05);
+          poi(tx - 1.2, ty + 1.1, 'xmas', 'back', { w: 1.5 });
+          poi(tx + 1.1, ty + 1.0, 'xmas', 'back', { w: 1.5 });
         }
         add(OW - 0.45 + D - 0.6, () => this.plant(OW - 0.45, D - 0.6));
         prop('plant', { x: OW - 0.45, y: D - 0.6 });
@@ -1212,44 +1212,78 @@
       if (XMAS) this.xmasWalls();
     }
 
-    // String lights swagging along the top of both walls, and a wreath on the door.
+    // Christmas on the walls: a fluffy garland with red bows along the top of
+    // both walls, big glowing bulbs on it, wreaths, and a MERRY XMAS banner.
     xmasWalls() {
-      const { W, D } = this.plan;
+      const { W, D, windows } = this.plan;
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
-      const cols = ['#ff6b6b', '#ffd166', '#6bc5ff', '#7ed98a', '#ff9ad5'];
-      const run = (len, at) => {
+      const cols = ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
+      const run = (len, at, seed) => {
         const pts = [];
-        for (let u = 0.2; u <= len - 0.1; u += 0.25) pts.push([u, WALL_H - 0.16 - Math.sin(((u - 0.2) % 1.25) / 1.25 * Math.PI) * 0.16]);
-        c.strokeStyle = '#3e5a3e'; c.lineWidth = 0.8; c.beginPath();
-        pts.forEach(([u, z], i) => { const q = at(u, z); i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y); });
-        c.stroke();
+        for (let u = 0.15; u <= len - 0.1; u += 0.12) pts.push([u, WALL_H - 0.18 - Math.sin(((u - 0.15) % 1.2) / 1.2 * Math.PI) * 0.2]);
+        // fluffy green garland
+        for (const [u, z] of pts) {
+          const q = at(u, z);
+          c.fillStyle = '#3e9a55'; c.beginPath(); c.arc(q.x, q.y, 3.4, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#5bb86d'; c.beginPath(); c.arc(q.x - 1, q.y - 1.2, 2, 0, Math.PI * 2); c.fill();
+        }
+        // red bows where the garland is pinned up
+        for (let u = 0.15; u <= len - 0.1; u += 1.2) {
+          const q = at(u, WALL_H - 0.16);
+          c.fillStyle = '#e8413a';
+          c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - 5, q.y - 3); c.lineTo(q.x - 5, q.y + 3); c.closePath(); c.fill();
+          c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x + 5, q.y - 3); c.lineTo(q.x + 5, q.y + 3); c.closePath(); c.fill();
+          c.beginPath(); c.moveTo(q.x - 1, q.y); c.lineTo(q.x - 3, q.y + 7); c.lineTo(q.x + 1, q.y + 6); c.fill();
+          c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(q.x, q.y, 1.5, 0, Math.PI * 2); c.fill();
+        }
+        // big glowing bulbs
         pts.forEach(([u, z], i) => {
           if (i % 2) return;
-          const q = at(u, z - 0.05);
-          const on = Math.sin(t * 2.5 + i * 0.9) > -0.3;
+          const q = at(u, z - 0.06);
+          const col = cols[(i / 2 + seed) % cols.length];
+          const on = Math.sin(t * 2.6 + i * 0.7) > -0.35;
+          if (on) { c.globalAlpha = 0.3; c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y + 2, 6, 0, Math.PI * 2); c.fill(); }
           c.globalAlpha = on ? 1 : 0.35;
-          c.fillStyle = cols[(i / 2) % cols.length];
-          c.beginPath(); c.ellipse(q.x, q.y, 1.6, 2.2, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = col; c.beginPath(); c.ellipse(q.x, q.y + 2, 2.1, 2.9, 0, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 1;
         });
-        c.globalAlpha = 1;
       };
-      run(W, (u, z) => P(u, 0, z));
-      run(D, (u, z) => P(0, u, z));
-      // wreath on the door
-      this.onWall('x0', this.plan.door.y, 1.3, (cc) => {
-        for (let k = 0; k < 12; k++) {
-          const a = (k / 12) * Math.PI * 2;
-          cc.fillStyle = k % 2 ? '#3f8a4c' : '#55a862';
-          cc.beginPath(); cc.arc(Math.cos(a) * 6, Math.sin(a) * 6, 3, 0, Math.PI * 2); cc.fill();
+      run(W, (u, z) => P(u, 0, z), 0);
+      run(D, (u, z) => P(0, u, z), 3);
+      // wreaths: on the door, between the windows, and on the left wall
+      const wreath = (dir, a, z, r) => this.onWall(dir, a, z, (cc) => {
+        for (let k = 0; k < 16; k++) {
+          const ang = (k / 16) * Math.PI * 2;
+          cc.fillStyle = k % 2 ? '#2f8a45' : '#4fb565';
+          cc.beginPath(); cc.arc(Math.cos(ang) * r, Math.sin(ang) * r, r * 0.45, 0, Math.PI * 2); cc.fill();
         }
-        for (const [bx, by] of [[4, -3], [-3, 4], [5, 3]]) { cc.fillStyle = '#e04848'; cc.beginPath(); cc.arc(bx, by, 1.3, 0, Math.PI * 2); cc.fill(); }
-        cc.fillStyle = '#e04848';
-        cc.beginPath(); cc.moveTo(0, 6); cc.lineTo(-4, 3); cc.lineTo(-4, 9); cc.closePath(); cc.fill();
-        cc.beginPath(); cc.moveTo(0, 6); cc.lineTo(4, 3); cc.lineTo(4, 9); cc.closePath(); cc.fill();
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2 + 0.3;
+          cc.fillStyle = cols[k % cols.length];
+          cc.beginPath(); cc.arc(Math.cos(ang) * r, Math.sin(ang) * r, r * 0.2, 0, Math.PI * 2); cc.fill();
+        }
+        cc.fillStyle = '#e8413a';
+        cc.beginPath(); cc.moveTo(0, r); cc.lineTo(-r * 0.7, r * 0.5); cc.lineTo(-r * 0.7, r * 1.4); cc.closePath(); cc.fill();
+        cc.beginPath(); cc.moveTo(0, r); cc.lineTo(r * 0.7, r * 0.5); cc.lineTo(r * 0.7, r * 1.4); cc.closePath(); cc.fill();
       });
+      wreath('x0', this.plan.door.y, 1.3, 7);
+      for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, 1.45, 6);
+      wreath('x0', 3.5, 1.5, 7);
+      // MERRY XMAS banner of little flags on the left wall
+      const word = 'MERRY XMAS';
+      const y0 = 5.6, step = 0.32;
+      for (let k = 0; k < word.length; k++) {
+        if (word[k] === ' ') continue;
+        const yy = y0 + k * step, zz = 1.9 - Math.sin((k / (word.length - 1)) * Math.PI) * 0.15;
+        this.onWall('x0', yy, zz, (cc) => {
+          cc.fillStyle = cols[k % cols.length];
+          cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
+          cc.fillStyle = '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
+          cc.fillText(word[k], 0, -1.5);
+        });
+      }
     }
-
     // ------------------------------------------------------------ furniture
 
     plant(x, y) {
@@ -1478,146 +1512,195 @@
       }
     }
 
-    // Pojangmacha: an orange tarp tent on poles over the cart, a warm bulb,
-    // and a front flap with the menu.
+    // Bungeoppang stall: an orange cart with big blue wheels, a glass case of
+    // fish breads, a picture signboard, the iron mold, and a red-and-yellow
+    // striped canopy on four thin poles, all one piece.
     pojangmacha(add, x, y) {
-      const P = (a, b, cc) => this.iso(a, b, cc);
       const W = 1.5, D = 0.75;
-      const x0 = x - 0.2, x1 = x + W + 0.2, y0 = y - 0.85, y1 = y + D + 0.25;
-      const H = 1.85, RIDGE = 2.15, tarp = '#f07a3a', tarpDark = '#d8612a';
-      const pole = (px, py) => this.box(px - 0.03, py - 0.03, 0, 0.06, 0.06, H, '#9b9b9b', '#8a8a8a', '#777');
-      // back poles and the back slope of the roof first: they're behind everyone
-      add(x0 + y0, () => {
-        pole(x0, y0); pole(x1, y0); pole(x0, y1);
-        // clear plastic back and left walls
-        this.poly([P(x0, y0, 0.2), P(x1, y0, 0.2), P(x1, y0, H), P(x0, y0, H)], 'rgba(235,245,255,.35)', 'rgba(160,180,200,.5)', 0.6);
-        this.poly([P(x0, y0, 0.2), P(x0, y1, 0.2), P(x0, y1, H), P(x0, y0, H)], 'rgba(235,245,255,.3)', 'rgba(160,180,200,.5)', 0.6);
-      });
       add(x + W / 2 + y + D / 2, () => this.bungeoCart(x, y));
-      // front pole, roof, bulb, flap: after the baker and the cart, before customers
-      add(x + y + 1.45, () => {
-        const c = this.ctx, t = this.t / 1000;
-        pole(x1, y1);
-        const ym = (y0 + y1) / 2;
-        this.poly([P(x0, y0, H), P(x1, y0, H), P(x1, ym, RIDGE), P(x0, ym, RIDGE)], tarpDark, this.pal.ink, 0.9);
-        this.poly([P(x0, ym, RIDGE), P(x1, ym, RIDGE), P(x1, y1, H), P(x0, y1, H)], tarp, this.pal.ink, 0.9);
-        this.poly([P(x1, y0, H), P(x1, ym, RIDGE), P(x1, y1, H)], tarpDark, this.pal.ink, 0.9);
-        // front flap with a scalloped edge
-        const a = P(x0, y1, H), b = P(x1, y1, H), drop = 9;
-        c.fillStyle = '#e8563a';
-        c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.lineTo(b.x, b.y + drop);
-        const n = 7;
-        for (let i = n; i > 0; i--) {
-          const k0 = i / n, k1 = (i - 1) / n;
-          const px0 = a.x + (b.x - a.x) * k0, py0 = a.y + (b.y - a.y) * k0 + drop;
-          const px1 = a.x + (b.x - a.x) * k1, py1 = a.y + (b.y - a.y) * k1 + drop;
-          c.quadraticCurveTo((px0 + px1) / 2, (py0 + py1) / 2 + 4, px1, py1);
-        }
-        c.closePath(); c.fill();
-        if (this.pal.ink) { c.strokeStyle = this.pal.ink; c.lineWidth = 0.8; c.stroke(); }
-        c.save();
-        c.translate((a.x + b.x) / 2, (a.y + b.y) / 2 + drop / 2);
-        c.rotate(Math.atan2(b.y - a.y, b.x - a.x));
-        c.fillStyle = '#fff'; c.font = '800 6.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
-        c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText('붕어빵 · 어묵', 0, 0);
-        c.restore();
-        // warm bulb hanging under the roof, gently swinging
-        const sw = Math.sin(t * 1.3) * 0.04;
-        const top = P(x + W / 2 + sw, ym, RIDGE - 0.05), bulb = P(x + W / 2 + sw, ym + 0.05, 1.55);
-        c.strokeStyle = '#555'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(top.x, top.y); c.lineTo(bulb.x, bulb.y); c.stroke();
-        const g = c.createRadialGradient(bulb.x, bulb.y, 0, bulb.x, bulb.y, 22);
-        g.addColorStop(0, 'rgba(255,214,120,.45)'); g.addColorStop(1, 'rgba(255,214,120,0)');
-        c.fillStyle = g; c.beginPath(); c.arc(bulb.x, bulb.y, 22, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#ffe08a'; c.beginPath(); c.arc(bulb.x, bulb.y, 2.4, 0, Math.PI * 2); c.fill();
-      });
+      // The canopy is drawn after the baker behind the cart, before customers in front.
+      add(x + y + 1.45, () => this.stallCanopy(x, y, W, D));
     }
 
-    // Christmas tree: three tiers, blinking lights, a star, presents underneath.
+    stallCanopy(x, y, W, D) {
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const c = this.ctx, t = this.t / 1000;
+      const H = 1.95, x0 = x - 0.12, x1 = x + W + 0.12, y0 = y - 0.12, y1 = y + D + 0.12;
+      const RED = '#e8413a', YEL = '#ffd23f';
+      const ink = this.pal.ink || '#5b4032';
+      const raw = (pts, fill) => { c.beginPath(); pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); c.closePath(); c.fillStyle = fill; c.fill(); };
+      // poles at the cart corners
+      for (const [px, py] of [[x + 0.03, y + 0.03], [x + W - 0.06, y + 0.03], [x + 0.03, y + D - 0.06], [x + W - 0.06, y + D - 0.06]]) {
+        this.box(px, py, 0.8, 0.03, 0.03, H - 0.8, '#c9c9c9', '#b0b0b0', '#999');
+      }
+      // warm bulb under the canopy
+      const bulb = P(x + W * 0.35, y + D / 2, H - 0.25);
+      const g = c.createRadialGradient(bulb.x, bulb.y, 0, bulb.x, bulb.y, 26);
+      g.addColorStop(0, 'rgba(255,220,130,.55)'); g.addColorStop(1, 'rgba(255,220,130,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(bulb.x, bulb.y, 26, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff3c4'; c.beginPath(); c.arc(bulb.x, bulb.y, 2.6, 0, Math.PI * 2); c.fill();
+      // striped roof (stripes run front to back, like the real ones)
+      const n = 8;
+      for (let i = 0; i < n; i++) {
+        const a = x0 + (x1 - x0) * i / n, b = x0 + (x1 - x0) * (i + 1) / n;
+        raw([P(a, y0, H), P(b, y0, H), P(b, y1, H), P(a, y1, H)], i % 2 ? YEL : RED);
+      }
+      c.strokeStyle = ink; c.lineWidth = 0.9;
+      c.beginPath(); [P(x0, y0, H), P(x1, y0, H), P(x1, y1, H), P(x0, y1, H)].forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); c.closePath(); c.stroke();
+      // scalloped valance hanging on the front and right edges, same stripes
+      const drop = 0.2, sway = Math.sin(t * 1.8) * 0.01;
+      const valance = (ax, ay, bx, by, segs) => {
+        for (let i = 0; i < segs; i++) {
+          const k0 = i / segs, k1 = (i + 1) / segs;
+          const p0 = P(ax + (bx - ax) * k0, ay + (by - ay) * k0, H), p1 = P(ax + (bx - ax) * k1, ay + (by - ay) * k1, H);
+          const q0 = P(ax + (bx - ax) * k0, ay + (by - ay) * k0, H - drop - sway), q1 = P(ax + (bx - ax) * k1, ay + (by - ay) * k1, H - drop - sway);
+          c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.lineTo(q1.x, q1.y);
+          c.quadraticCurveTo((q0.x + q1.x) / 2, (q0.y + q1.y) / 2 + 3.5, q0.x, q0.y); c.closePath();
+          c.fillStyle = i % 2 ? YEL : RED; c.fill();
+          c.strokeStyle = ink; c.lineWidth = 0.6; c.stroke();
+        }
+      };
+      valance(x0, y1, x1, y1, n);
+      valance(x1, y0, x1, y1, 4);
+    }
+
+    // Christmas tree: tall and sparkly, with tinsel, baubles, blinking lights,
+    // a glowing star, and a pile of presents.
     xmasTree(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
-      const ink = this.pal.ink || '#3a4a3a';
-      // presents
+      const ink = this.pal.ink || '#2f4a34';
       const gift = (gx, gy, s, col, rib) => {
-        this.box(gx, gy, 0, s, s, s * 0.8, this.shade(col, 15), col, this.shade(col, -15));
-        const q0 = P(gx + s / 2, gy, s * 0.8), q1 = P(gx + s / 2, gy + s, s * 0.8);
-        c.strokeStyle = rib; c.lineWidth = 1.4; c.beginPath(); c.moveTo(q0.x, q0.y); c.lineTo(q1.x, q1.y); c.stroke();
+        const h = s * 0.8;
+        this.box(gx, gy, 0, s, s, h, this.shade(col, 18), col, this.shade(col, -18));
+        c.strokeStyle = rib; c.lineWidth = 1.6;
+        const a0 = P(gx + s / 2, gy, h), a1 = P(gx + s / 2, gy + s, h), a2 = P(gx + s / 2, gy + s, 0);
+        c.beginPath(); c.moveTo(a0.x, a0.y); c.lineTo(a1.x, a1.y); c.lineTo(a2.x, a2.y); c.stroke();
+        const b0 = P(gx, gy + s / 2, h), b1 = P(gx + s, gy + s / 2, h), b2 = P(gx + s, gy + s / 2, 0);
+        c.beginPath(); c.moveTo(b0.x, b0.y); c.lineTo(b1.x, b1.y); c.lineTo(b2.x, b2.y); c.stroke();
+        const top = P(gx + s / 2, gy + s / 2, h);
+        c.fillStyle = rib; c.beginPath(); c.ellipse(top.x - 2.5, top.y - 1.5, 2.6, 1.6, -0.5, 0, Math.PI * 2); c.ellipse(top.x + 2.5, top.y - 1.5, 2.6, 1.6, 0.5, 0, Math.PI * 2); c.fill();
       };
-      gift(x - 0.6, y + 0.15, 0.32, '#e05a5a', '#ffe08a');
-      // trunk
-      this.box(x - 0.08, y - 0.08, 0, 0.16, 0.16, 0.25, '#8a5a3a', '#7a4a2e', '#6a3e26');
-      const base = P(x, y, 0.2);
-      const tiers = [[34, 26, 0], [27, 22, 17], [19, 18, 32]];
+      // presents behind the tree
+      gift(x - 0.75, y - 0.55, 0.4, '#7d5be0', '#ffd34d');
+      gift(x + 0.2, y - 0.75, 0.34, '#2fa36b', '#ff6b6b');
+      // pot + trunk
+      this.box(x - 0.25, y - 0.25, 0, 0.5, 0.5, 0.3, '#e0614f', '#c94b3a', '#b23f30');
+      this.box(x - 0.08, y - 0.08, 0.3, 0.16, 0.16, 0.2, '#8a5a3a', '#7a4a2e', '#6a3e26');
+      const base = P(x, y, 0.45);
+      // five tiers, wide at the bottom
+      const tiers = [[64, 40, 0], [54, 36, 26], [44, 32, 50], [33, 28, 72], [22, 24, 90]];
       for (const [hw, h, up] of tiers) {
-        c.fillStyle = '#4f9a5c';
+        const bx = base.x, by = base.y - up;
+        c.fillStyle = '#3e9a55';
         c.beginPath();
-        c.moveTo(base.x - hw, base.y - up);
-        c.quadraticCurveTo(base.x, base.y - up + 6, base.x + hw, base.y - up);
-        c.lineTo(base.x, base.y - up - h - 10);
+        c.moveTo(bx - hw, by);
+        // fluffy bottom edge
+        for (let k = 0; k <= 6; k++) { const px = bx - hw + (2 * hw) * k / 6; c.quadraticCurveTo(px - hw / 6, by + 7, px, by); }
+        c.lineTo(bx, by - h - 12);
         c.closePath(); c.fill();
-        c.strokeStyle = ink; c.lineWidth = 1; c.stroke();
+        c.strokeStyle = ink; c.lineWidth = 1.2; c.stroke();
+        // lighter highlight on the left side
+        c.fillStyle = 'rgba(160,230,150,.35)';
+        c.beginPath(); c.moveTo(bx - hw * 0.8, by - 2); c.lineTo(bx - 4, by - h - 6); c.lineTo(bx - hw * 0.25, by - 2); c.closePath(); c.fill();
       }
-      // blinking lights
-      const cols = ['#ff6b6b', '#ffd166', '#6bc5ff', '#b28dff', '#ffffff'];
+      // gold tinsel swags
+      c.strokeStyle = '#ffd34d'; c.lineWidth = 1.8;
+      for (const [hw, h, up] of tiers.slice(0, 4)) {
+        const by = base.y - up - h * 0.45;
+        c.beginPath(); c.moveTo(base.x - hw * 0.62, by - 4); c.quadraticCurveTo(base.x, by + 8, base.x + hw * 0.62, by - 10); c.stroke();
+      }
+      // baubles
+      const bcol = ['#e8413a', '#3b8ee0', '#ffd34d', '#e05ab4', '#ffffff', '#7d5be0'];
       let i = 0;
-      for (const [hw, , up] of tiers) {
-        for (let k = -2; k <= 2; k++) {
-          const lx = base.x + k * hw * 0.35, ly = base.y - up - 3 + Math.abs(k) * -1.5;
-          const on = Math.sin(t * 3 + i * 1.7) > -0.2;
-          c.fillStyle = cols[i % cols.length];
-          c.globalAlpha = on ? 1 : 0.3;
-          c.beginPath(); c.arc(lx, ly, 1.8, 0, Math.PI * 2); c.fill();
+      for (const [hw, h, up] of tiers) {
+        const m = Math.max(3, Math.round(hw / 12));
+        for (let k = 0; k < m; k++) {
+          const f = (k + 0.5) / m, px = base.x - hw * 0.8 + hw * 1.6 * f, py = base.y - up - 4 - Math.abs(f - 0.5) * 6;
+          c.fillStyle = bcol[i % bcol.length];
+          c.beginPath(); c.arc(px, py, 3.2, 0, Math.PI * 2); c.fill();
+          c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.arc(px - 1, py - 1.1, 1, 0, Math.PI * 2); c.fill();
+          i++;
+        }
+      }
+      // twinkling fairy lights with a glow
+      const lcol = ['#fff6a8', '#ff8a8a', '#8ad8ff', '#b6ff9a', '#ffb3f0'];
+      i = 0;
+      for (const [hw, h, up] of tiers) {
+        for (let k = 0; k < 6; k++) {
+          const f = (k + 0.2 + (i % 2) * 0.3) / 6, lx = base.x - hw * 0.7 + hw * 1.4 * f, ly = base.y - up - h * 0.55 + Math.sin(f * 6) * 3;
+          const on = Math.sin(t * 3.2 + i * 1.3) > -0.1;
+          if (on) {
+            c.fillStyle = lcol[i % lcol.length];
+            c.globalAlpha = 0.35; c.beginPath(); c.arc(lx, ly, 5, 0, Math.PI * 2); c.fill();
+          }
+          c.globalAlpha = on ? 1 : 0.35;
+          c.fillStyle = lcol[i % lcol.length]; c.beginPath(); c.arc(lx, ly, 1.9, 0, Math.PI * 2); c.fill();
           i++;
         }
       }
       c.globalAlpha = 1;
-      // star
-      const sx = base.x, sy = base.y - 32 - 18 - 12, r = 5 + Math.sin(t * 2) * 0.5;
+      // glowing star
+      const sx = base.x, sy = base.y - 90 - 24 - 16, r = 10 + Math.sin(t * 2) * 0.8;
+      const sg = c.createRadialGradient(sx, sy, 0, sx, sy, 26);
+      sg.addColorStop(0, 'rgba(255,230,120,.7)'); sg.addColorStop(1, 'rgba(255,230,120,0)');
+      c.fillStyle = sg; c.beginPath(); c.arc(sx, sy, 26, 0, Math.PI * 2); c.fill();
       c.fillStyle = '#ffd34d'; c.beginPath();
       for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; c.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
-      c.closePath(); c.fill(); c.strokeStyle = '#c99a1a'; c.lineWidth = 0.7; c.stroke();
+      c.closePath(); c.fill(); c.strokeStyle = '#c99a1a'; c.lineWidth = 1; c.stroke();
       // presents in front
-      gift(x + 0.25, y + 0.3, 0.28, '#5b8de0', '#ffffff');
-      gift(x - 0.15, y + 0.45, 0.24, '#f2c14e', '#e05a5a');
+      gift(x + 0.35, y + 0.25, 0.42, '#e8413a', '#ffffff');
+      gift(x - 0.45, y + 0.4, 0.36, '#3b8ee0', '#ffd34d');
+      gift(x - 0.05, y + 0.6, 0.3, '#ffd34d', '#e8413a');
     }
 
-    // A little red street cart with a cast-iron fish mold, fish breads browning
-    // on it, steam, and a banner on a pole.
+    // The stall's cart: orange body, big blue wheels, glass case of fish breads,
+    // a picture signboard, the iron mold browning more fish, and steam.
     bungeoCart(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
       const W = 1.5, D = 0.75;
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      // cart body on wheels
-      this.box(x, y, 0.15, W, D, 0.6, '#fff4e6', '#e0614f', '#c44d3e');
-      for (const wx of [x + 0.28, x + W - 0.28]) {
-        const w = P(wx, y + D, 0.13);
-        c.fillStyle = '#4a3a33'; c.beginPath(); c.arc(w.x, w.y, 4, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#c9b8a8'; c.beginPath(); c.arc(w.x, w.y, 1.4, 0, Math.PI * 2); c.fill();
+      // body
+      this.box(x, y, 0.22, W, D, 0.58, '#f6b26b', '#e8873a', '#d0712a');
+      // big blue wheels on the right side, small caster at the front
+      for (const wy of [y + 0.2, y + D - 0.2]) {
+        const w = P(x + W, wy, 0.2);
+        c.fillStyle = '#2f6fd6'; c.beginPath(); c.ellipse(w.x, w.y, 6.5, 8, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#1d4fa0'; c.lineWidth = 1.2; c.stroke();
+        c.fillStyle = '#f2f2f2'; c.beginPath(); c.ellipse(w.x, w.y, 2.2, 2.8, 0, 0, Math.PI * 2); c.fill();
       }
-      // front label
-      const fl = P(x + W / 2, y + D, 0.47);
-      c.fillStyle = '#fff'; c.font = '800 7px ui-sans-serif, system-ui, -apple-system, sans-serif';
-      c.fillText('🐟 1000원', fl.x, fl.y);
-      // iron mold and the fish on it
-      this.box(x + 0.1, y + 0.1, 0.75, W - 0.2, D - 0.2, 0.05, '#3d3532', '#2c2522', '#241e1b');
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
-        const q = P(x + 0.35 + i * 0.4, y + 0.24 + j * 0.27, 0.81);
-        // each fish browns, then gets swapped for a fresh pale one
+      const cw = P(x + 0.2, y + D, 0.07);
+      c.fillStyle = '#444'; c.beginPath(); c.arc(cw.x, cw.y, 2.5, 0, Math.PI * 2); c.fill();
+      // iron mold on the right half
+      this.box(x + 0.8, y + 0.1, 0.8, 0.6, D - 0.2, 0.06, '#3d3532', '#2c2522', '#241e1b');
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+        const q = P(x + 0.95 + i * 0.3, y + 0.24 + j * 0.27, 0.87);
         const k = ((t * 0.12 + i * 0.29 + j * 0.47) % 1);
-        const col = k < 0.5 ? '#f3d49a' : k < 0.85 ? '#e9a94b' : '#d48a33';
-        c.save(); c.translate(q.x, q.y);
-        c.fillStyle = col; c.strokeStyle = '#8a5a26'; c.lineWidth = 0.7;
-        c.beginPath(); c.ellipse(0, 0, 4.2, 2.3, 0, 0, Math.PI * 2); c.fill(); c.stroke();
-        c.beginPath(); c.moveTo(3.4, 0); c.lineTo(6.4, -2.2); c.lineTo(6.4, 2.2); c.closePath(); c.fill(); c.stroke();
-        c.fillStyle = '#5a3a1a'; c.fillRect(-2.6, -0.8, 0.9, 0.9);
-        c.restore();
+        this.fishBread(q.x, q.y, k < 0.5 ? '#f3d49a' : k < 0.85 ? '#e9a94b' : '#d48a33', 1);
       }
+      // glass display case on the left half, full of golden fish
+      const gx = x + 0.1, gy = y + 0.12, gw = 0.6, gd = D - 0.24, gh = 0.38;
+      this.box(gx, gy, 0.8, gw, gd, 0.03, '#d8c0a0', '#b89a78', '#a8886a');
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
+        const q = P(gx + 0.12 + i * 0.18, gy + 0.12 + j * 0.25, 0.86 + j * 0.02);
+        this.fishBread(q.x, q.y, '#ecae52', 0.85);
+      }
+      c.globalAlpha = 0.28;
+      this.box(gx, gy, 0.83, gw, gd, gh, '#eaf6ff', '#cfe8fb', '#bcdcf5');
+      c.globalAlpha = 1;
+      // signboard on the front face: yellow panel with a fish and the price
+      const s0 = P(x + 0.18, y + D, 0.72), s1 = P(x + 0.95, y + D, 0.72), s2 = P(x + 0.95, y + D, 0.32), s3 = P(x + 0.18, y + D, 0.32);
+      c.fillStyle = '#ffe14d'; c.beginPath(); c.moveTo(s0.x, s0.y); c.lineTo(s1.x, s1.y); c.lineTo(s2.x, s2.y); c.lineTo(s3.x, s3.y); c.closePath(); c.fill();
+      c.strokeStyle = '#2f6fd6'; c.lineWidth = 1.2; c.stroke();
+      const mid = { x: (s0.x + s2.x) / 2, y: (s0.y + s2.y) / 2 };
+      this.fishBread(mid.x - 6, mid.y - 1, '#e9a94b', 1.1);
+      c.fillStyle = '#e8413a'; c.font = '800 6px ui-sans-serif, system-ui, -apple-system, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('붕어빵', mid.x + 7, mid.y - 2.5);
+      c.fillStyle = '#2f6fd6'; c.fillText('3개 2천', mid.x + 7, mid.y + 3.5);
       // steam
       for (let i = 0; i < 3; i++) {
         const k = (t * 0.45 + i / 3) % 1;
-        const q = P(x + 0.4 + i * 0.35, y + 0.35, 0.9 + k * 0.9);
+        const q = P(x + 0.9 + i * 0.2, y + 0.35, 0.95 + k * 0.8);
         c.globalAlpha = 0.5 * (1 - k);
         c.fillStyle = '#ffffff';
         c.beginPath(); c.arc(q.x + Math.sin(t * 2 + i) * 2, q.y, 2.5 + k * 3, 0, Math.PI * 2); c.fill();
@@ -1625,6 +1708,15 @@
       c.globalAlpha = 1;
     }
 
+    fishBread(x, y, col, s) {
+      const c = this.ctx;
+      c.save(); c.translate(x, y); c.scale(s, s);
+      c.fillStyle = col; c.strokeStyle = '#8a5a26'; c.lineWidth = 0.7;
+      c.beginPath(); c.ellipse(0, 0, 4.2, 2.3, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(3.4, 0); c.lineTo(6.4, -2.2); c.lineTo(6.4, 2.2); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#5a3a1a'; c.fillRect(-2.6, -0.8, 0.9, 0.9);
+      c.restore();
+    }
     booth(add, x, y) {
       const P = (a, b, c) => this.iso(a, b, c);
       const pal = this.pal;
