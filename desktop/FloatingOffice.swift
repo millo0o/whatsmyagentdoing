@@ -41,6 +41,37 @@ final class DragWebView: WKWebView {
   }
 }
 
+// Shows a soft frame while the mouse is over the window, so its edges and
+// resize corner are easy to find; invisible otherwise.
+final class HoverFrame: NSView {
+  var grip: NSView?
+  override init(frame: NSRect) {
+    super.init(frame: frame)
+    wantsLayer = true
+    layer?.cornerRadius = 14
+    layer?.borderWidth = 2
+    layer?.borderColor = NSColor(calibratedRed: 0.42, green: 0.29, blue: 0.23, alpha: 0.6).cgColor
+    layer?.backgroundColor = NSColor(calibratedWhite: 1, alpha: 0.35).cgColor
+    layer?.opacity = 0
+  }
+  required init?(coder: NSCoder) { fatalError() }
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    for t in trackingAreas { removeTrackingArea(t) }
+    addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+  }
+  func show(_ on: Bool) {
+    NSAnimationContext.runAnimationGroup { ctx in
+      ctx.duration = 0.2
+      layer?.opacity = on ? 1 : 0
+      grip?.animator().alphaValue = on ? 1 : 0
+    }
+  }
+  override func mouseEntered(with event: NSEvent) { show(true) }
+  override func mouseExited(with event: NSEvent) { show(false) }
+  override func hitTest(_ point: NSPoint) -> NSView? { nil } // clicks go to the office
+}
+
 // Keep the whole window (and its resize corner) on the visible screen.
 func fitOnScreen(_ r: NSRect) -> NSRect {
   let mid = NSPoint(x: r.midX, y: r.midY)
@@ -120,15 +151,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     let config = WKWebViewConfiguration()
     let root = NSView(frame: panel.contentView!.bounds)
     root.autoresizingMask = [.width, .height]
+    let hover = HoverFrame(frame: root.bounds)
+    hover.autoresizingMask = [.width, .height]
+    root.addSubview(hover)
     web = DragWebView(frame: root.bounds, configuration: config)
     web.autoresizingMask = [.width, .height]
     web.setValue(false, forKey: "drawsBackground")
     web.navigationDelegate = self
     web.makeMenu = { [weak self] in self?.makeMenu() ?? NSMenu() }
     root.addSubview(web)
-    let grip = ResizeGrip(frame: NSRect(x: root.bounds.maxX - 24, y: 0, width: 24, height: 24))
+    let grip = ResizeGrip(frame: NSRect(x: root.bounds.maxX - 30, y: 0, width: 30, height: 30))
     grip.autoresizingMask = [.minXMargin, .maxYMargin]
     root.addSubview(grip)
+    grip.alphaValue = 0
+    hover.grip = grip
     panel.contentView = root
     web.load(URLRequest(url: officeURL()))
     panel.orderFrontRegardless()
