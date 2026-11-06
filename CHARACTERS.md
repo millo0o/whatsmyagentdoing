@@ -8,7 +8,7 @@
 ## 1. 설치
 
 ```bash
-git clone --depth 1 -b cute-office <이 저장소 주소> ~/.claude/skills/myoffice
+git clone --depth 1 -b cute-office https://github.com/millo0o/whatsmyagentdoing ~/.claude/skills/myoffice
 ```
 
 Node.js 18 이상이 필요해요. 설치한 뒤 Claude Code에서 `/myoffice`를 입력하거나 아래 명령으로 켜요.
