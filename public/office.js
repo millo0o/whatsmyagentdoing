@@ -54,7 +54,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞', pet: '💕',
+    vending: '🥤', foosball: '⚽', phone: '📞', pet: '💕', bake: '♨️', bungeo: '🐟',
   };
 
   function hash(str) {
@@ -591,14 +591,13 @@
         solid(fx, fby, 1.6, 0.8, 0.05);
         poi(fx - 0.45, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
         poi(fx + 2.05, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
-        const bx = OW - 2.0, by = fy;
-        this.booth(add, bx, by);
-        prop('booth', { x: bx, y: by });
-        solid(bx - 0.05, by - 0.05, 1.4, 0.1, 0.03);
-        solid(bx - 0.05, by - 0.05, 0.1, 1.4, 0.03);
-        solid(bx + 1.25, by - 0.05, 0.1, 1.4, 0.03);
-        solid(bx + 0.85, by + 1.25, 0.5, 0.1, 0.03);
-        poi(bx + 0.65, by + 0.6, 'phone', 'front', { sit: 0.45 });
+        // Winter treat: a bungeoppang (fish-shaped bread) cart where the phone booth was.
+        const bx = OW - 2.3, by = fy + 0.15;
+        add(bx + 0.75 + by + 0.4, () => this.bungeoCart(bx, by));
+        solid(bx, by, 1.5, 0.75, 0.05);
+        poi(bx + 0.75, by - 0.5, 'bake', 'front');
+        poi(bx + 0.35, by + 1.2, 'bungeo', 'back');
+        poi(bx + 1.15, by + 1.2, 'bungeo', 'back');
         add(OW - 0.45 + D - 0.6, () => this.plant(OW - 0.45, D - 0.6));
         prop('plant', { x: OW - 0.45, y: D - 0.6 });
       }
@@ -1414,6 +1413,57 @@
           this.ctx.fillRect(q.x - 1.5, q.y - 3, 3, 6);
         }
       }
+    }
+
+    // A little red street cart with a cast-iron fish mold, fish breads browning
+    // on it, steam, and a banner on a pole.
+    bungeoCart(x, y) {
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const c = this.ctx, t = this.t / 1000;
+      const W = 1.5, D = 0.75;
+      // banner pole at the back-left corner (drawn first: it's behind)
+      this.box(x + 0.04, y + 0.04, 0.75, 0.05, 0.05, 1.05, '#8a6a52', '#8a6a52', '#6f5442');
+      const f0 = P(x + 0.09, y + 0.06, 1.75), f1 = P(x + 0.09, y + 0.06, 1.35);
+      const wave = Math.sin(t * 2.2) * 1.5;
+      c.fillStyle = '#e0614f';
+      c.beginPath(); c.moveTo(f0.x, f0.y); c.lineTo(f0.x + 34, f0.y + 2 + wave); c.lineTo(f1.x + 34, f1.y + 2 + wave); c.lineTo(f1.x, f1.y); c.closePath(); c.fill();
+      if (this.pal.ink) { c.strokeStyle = this.pal.ink; c.lineWidth = 0.8; c.stroke(); }
+      c.fillStyle = '#fff'; c.font = '800 7px ui-sans-serif, system-ui, -apple-system, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('붕어빵', (f0.x + f1.x) / 2 + 17, (f0.y + f1.y) / 2 + 2 + wave / 2);
+      // cart body on wheels
+      this.box(x, y, 0.15, W, D, 0.6, '#fff4e6', '#e0614f', '#c44d3e');
+      for (const wx of [x + 0.28, x + W - 0.28]) {
+        const w = P(wx, y + D, 0.13);
+        c.fillStyle = '#4a3a33'; c.beginPath(); c.arc(w.x, w.y, 4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#c9b8a8'; c.beginPath(); c.arc(w.x, w.y, 1.4, 0, Math.PI * 2); c.fill();
+      }
+      // front label
+      const fl = P(x + W / 2, y + D, 0.47);
+      c.fillStyle = '#fff'; c.font = '800 7px ui-sans-serif, system-ui, -apple-system, sans-serif';
+      c.fillText('🐟 1000원', fl.x, fl.y);
+      // iron mold and the fish on it
+      this.box(x + 0.1, y + 0.1, 0.75, W - 0.2, D - 0.2, 0.05, '#3d3532', '#2c2522', '#241e1b');
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
+        const q = P(x + 0.35 + i * 0.4, y + 0.24 + j * 0.27, 0.81);
+        // each fish browns, then gets swapped for a fresh pale one
+        const k = ((t * 0.12 + i * 0.29 + j * 0.47) % 1);
+        const col = k < 0.5 ? '#f3d49a' : k < 0.85 ? '#e9a94b' : '#d48a33';
+        c.save(); c.translate(q.x, q.y);
+        c.fillStyle = col; c.strokeStyle = '#8a5a26'; c.lineWidth = 0.7;
+        c.beginPath(); c.ellipse(0, 0, 4.2, 2.3, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(3.4, 0); c.lineTo(6.4, -2.2); c.lineTo(6.4, 2.2); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#5a3a1a'; c.fillRect(-2.6, -0.8, 0.9, 0.9);
+        c.restore();
+      }
+      // steam
+      for (let i = 0; i < 3; i++) {
+        const k = (t * 0.45 + i / 3) % 1;
+        const q = P(x + 0.4 + i * 0.35, y + 0.35, 0.9 + k * 0.9);
+        c.globalAlpha = 0.5 * (1 - k);
+        c.fillStyle = '#ffffff';
+        c.beginPath(); c.arc(q.x + Math.sin(t * 2 + i) * 2, q.y, 2.5 + k * 3, 0, Math.PI * 2); c.fill();
+      }
+      c.globalAlpha = 1;
     }
 
     booth(add, x, y) {
