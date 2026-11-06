@@ -105,6 +105,10 @@
   // Turn custom characters off (back to the built-in little people) with
   // { "enabled": false } in assets/chars/chars.json.
   const SPRITE_H = 38; // on-screen height in px at scale 1
+  const SPRITE_RES = 8; // pre-render sprites this many times larger so zoomed-in views stay sharp
+  // Floating window: characters a bit bigger than the furniture, and labels drawn
+  // in screen pixels so they stay readable at any window size.
+  const CHAR_BOOST = FLOATWIN ? 1.55 : 1;
   const CHARS = []; // [{ front, left, right, back, walk: [4] }]
   // Cut a whole sheet into characters by connected shapes (not a fixed grid),
   // so a neighbour's feet never end up in a cell and nothing gets clipped.
@@ -231,14 +235,17 @@
     // Direction and walk frames come from different sheets drawn at slightly
     // different sizes, so each set is normalised on its own body area.
     const refArea = (list) => { const a = list.filter(Boolean).map((c) => c.area); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : front.area; };
-    const kDir = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(0, 4))) * 3; // 3x for crisp drawing
-    const kWalk = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(4))) * 3;
+    const kDir = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(0, 4))) * SPRITE_RES;
+    const kWalk = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(4))) * SPRITE_RES;
     let k = kDir;
     const shrink = (c, i) => {
       k = i >= 4 ? kWalk : kDir;
       if (!c) return front.cv;
       const out = document.createElement('canvas');
-      out.width = Math.max(1, Math.round(c.cv.width * k)); out.height = Math.max(1, Math.round(c.cv.height * k));
+      // Never upscale past the source drawing; remember the on-screen size separately.
+      const kk = Math.min(k, 1);
+      out.width = Math.max(1, Math.round(c.cv.width * kk)); out.height = Math.max(1, Math.round(c.cv.height * kk));
+      out.dw = c.cv.width * k / SPRITE_RES; out.dh = c.cv.height * k / SPRITE_RES;
       const o = out.getContext('2d'); o.imageSmoothingQuality = 'high';
       o.drawImage(c.cv, 0, 0, out.width, out.height);
       return out;
@@ -1460,7 +1467,7 @@
 
       const fb = this.iso(p.x, p.y, 0);
       c.fillStyle = this.pal.shadow;
-      c.beginPath(); c.ellipse(fb.x, fb.y, 10, 5, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(fb.x, fb.y, 10 * CHAR_BOOST, 5 * CHAR_BOOST, 0, 0, Math.PI * 2); c.fill();
       if (this.hoverKey === p.key) {
         c.strokeStyle = STATUS_COLOR[s.status] || '#888';
         c.lineWidth = 2;
@@ -1636,7 +1643,8 @@
         default:
           if (!moving && front && st.pose === 'stand') sq = 1 + Math.sin(t * 2 + p.phase) * 0.02; // breathing
       }
-      const H = img.height / 3 * sc, W = img.width / 3 * sc;
+      sc *= CHAR_BOOST;
+      const H = (img.dh || img.height / SPRITE_RES) * sc, W = (img.dw || img.width / SPRITE_RES) * sc;
       const footY = baseY + (seated ? 4 : 2);
       c.save();
       c.translate(x, footY + dy);
@@ -1917,12 +1925,13 @@
         else it.draw();
       }
       this.pingPongBall();
-      if (this.compact) {
-        // Keep labels readable when the room is scaled down for PiP.
+      if (this.compact || FLOATWIN) {
+        // Keep labels readable when the room is scaled down (PiP, floating window).
+        const u = FLOATWIN ? Math.max(1.15, Math.min(1.7, this.cw / 640)) : 1;
         c.save();
-        c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        c.setTransform(this.dpr * u, 0, 0, this.dpr * u, 0, 0);
         for (const [p, at] of heads) this.bubble(p, {
-          ...at, x: at.x * this.cam.zoom + this.cam.ox, y: at.y * this.cam.zoom + this.cam.oy,
+          ...at, x: (at.x * this.cam.zoom + this.cam.ox) / u, y: (at.y * this.cam.zoom + this.cam.oy) / u,
         });
         c.restore();
       } else {

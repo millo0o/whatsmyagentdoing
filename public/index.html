@@ -386,14 +386,14 @@
   .float-stats { display: none; }
   body.float .float-stats {
     display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; align-items: center;
-    position: fixed; z-index: 29; top: 8px; right: 10px; max-width: 70%; padding: 4px 10px;
-    font-size: 11px; color: #5b4032; background: rgba(255, 250, 243, .9); border: 1.5px solid #e2c6b2;
+    position: fixed; z-index: 29; top: 8px; right: 10px; max-width: 70%; padding: 5px 12px;
+    font-size: clamp(12px, 1.6vw, 15px); color: #5b4032; background: rgba(255, 250, 243, .9); border: 1.5px solid #e2c6b2;
     border-radius: 999px; box-shadow: 0 2px 8px #6b4a3a1f; transition: top .2s;
   }
   body.float .float-stats[hidden] { display: none; }
   body.float .float-stats b { font-weight: 800; }
   body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
-  body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 12px; height: 12px; }
+  body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 1.1em; height: 1.1em; }
   html:hover body.float .float-stats { top: 58px; }
   body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
   body.float #officeWrap { position: fixed; inset: 0; }
