@@ -1,0 +1,9 @@
+{
+  "sheets": [
+    {
+      "dir": "example-directions.svg",
+      "walk": "example-walk.svg",
+      "rows": 3
+    }
+  ]
+}

@@ -8,7 +8,7 @@
   const TH = 32; // tile height px; one z unit is TH px too
   const WALL_H = 2.4;
   const WORKING = new Set(['thinking', 'tool', 'typing', 'waiting', 'error']);
-  const MAX_WANDERERS = 7;
+  const MAX_WANDERERS = 30;
   const SPEED = 2.1; // tiles / second
 
   const SKIN = ['#f3cfb0', '#e5b38f', '#c98d66', '#9a6646', '#6e4630', '#f7dcc7'];
@@ -44,7 +44,7 @@
     badge.image.src = badge.logo;
   }
   const PANTS = ['#34405a', '#2c2c34', '#4a3f35', '#3b4a3f'];
-  const PANEL = ['#7d93c4', '#d98b6a', '#7fb08a', '#c9a24c'];
+  const PANEL = ['#b9d0f2', '#f7c1b4', '#bfe3c4', '#f6dd9c'];
 
   const STATUS_COLOR = {
     thinking: '#8b6be6', tool: '#3b8ee0', typing: '#22a874', waiting: '#e09412',
@@ -66,6 +66,176 @@
   const rand = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+  // ---- Custom character sprites ----
+  // Your own sheets go in assets/chars/ with a chars.json listing them; without
+  // one, the example characters in assets/chars-example/ are used. Each entry is
+  // a direction sheet + walk sheet, 4 columns x `rows` rows, on a transparent or
+  // white background. Direction columns: front, facing left, facing right, back.
+  // Walk columns: 4 frames walking toward the left. See CHARACTERS.md.
+  // Turn custom characters off (back to the built-in little people) with
+  // { "enabled": false } in assets/chars/chars.json.
+  const SPRITE_H = 38; // on-screen height in px at scale 1
+  const CHARS = []; // [{ front, left, right, back, walk: [4] }]
+  // Cut a whole sheet into characters by connected shapes (not a fixed grid),
+  // so a neighbour's feet never end up in a cell and nothing gets clipped.
+  function cutSheet(img, rows) {
+    const W = img.width, H = img.height, N = W * H;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0);
+    const im = g.getImageData(0, 0, W, H), d = im.data;
+    // Outline pixels (dark-ish), thickened by 2px so the background fill can't
+    // squeeze through tiny gaps in a line and hollow out a white body.
+    const dark = new Uint8Array(N);
+    for (let k = 0; k < N; k++) {
+      const i = k * 4;
+      if (d[i + 3] > 128 && d[i] + d[i + 1] + d[i + 2] < 560) dark[k] = 1;
+    }
+    const wall = new Uint8Array(N);
+    const R = 2;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!dark[y * W + x]) continue;
+      for (let yy = Math.max(0, y - R); yy <= Math.min(H - 1, y + R); yy++)
+        for (let xx = Math.max(0, x - R); xx <= Math.min(W - 1, x + R); xx++) wall[yy * W + xx] = 1;
+    }
+    // Background = transparent or near-white. (The sheets come with transparent
+    // backgrounds, and sometimes transparent bodies too; enclosed ones get filled.)
+    // White fur is part of the body (dashed fur outlines would let a white-based fill leak in).
+    const anyTransparent = (() => { for (let k = 3; k < d.length; k += 4 * 97) if (d[k] < 128) return true; return false; })();
+    const light = anyTransparent
+      ? (k) => d[k * 4 + 3] < 128
+      : (k) => { const i = k * 4; return d[i] > 215 && d[i + 1] > 215 && d[i + 2] > 215; };
+    const bg = new Uint8Array(N);
+    const stack = [];
+    for (let x = 0; x < W; x++) stack.push(x, (H - 1) * W + x);
+    for (let y = 0; y < H; y++) stack.push(y * W, y * W + W - 1);
+    while (stack.length) {
+      const k = stack.pop();
+      if (bg[k] || wall[k] || !light(k)) continue;
+      bg[k] = 1;
+      const x = k % W;
+      if (x > 0) stack.push(k - 1);
+      if (x < W - 1) stack.push(k + 1);
+      if (k >= W) stack.push(k - W);
+      if (k < N - W) stack.push(k + W);
+    }
+    // Eat back the 2px white halo just outside the outlines.
+    for (let it = 0; it < R + 1; it++) {
+      const add = [];
+      for (let k = 0; k < N; k++) {
+        if (bg[k] || dark[k] || !light(k)) continue;
+        const x = k % W;
+        if ((x > 0 && bg[k - 1]) || (x < W - 1 && bg[k + 1]) || (k >= W && bg[k - W]) || (k < N - W && bg[k + W])) add.push(k);
+      }
+      for (const k of add) bg[k] = 1;
+    }
+    // Label the remaining shapes.
+    const lab = new Int32Array(N).fill(-1);
+    const comps = [];
+    for (let s0 = 0; s0 < N; s0++) {
+      if (bg[s0] || lab[s0] >= 0) continue;
+      const id = comps.length, c = { id, n: 0, x0: W, y0: H, x1: 0, y1: 0, sx: 0, sy: 0 };
+      lab[s0] = id; stack.push(s0);
+      while (stack.length) {
+        const k = stack.pop(), x = k % W, y = (k / W) | 0;
+        c.n++; c.sx += x; c.sy += y;
+        if (x < c.x0) c.x0 = x; if (x > c.x1) c.x1 = x; if (y < c.y0) c.y0 = y; if (y > c.y1) c.y1 = y;
+        const nb = [x > 0 ? k - 1 : -1, x < W - 1 ? k + 1 : -1, k >= W ? k - W : -1, k < N - W ? k + W : -1];
+        for (const q of nb) if (q >= 0 && !bg[q] && lab[q] < 0) { lab[q] = id; stack.push(q); }
+      }
+      comps.push(c);
+    }
+    // Biggest shape in each grid cell is that character; nearby smaller
+    // shapes (a detached tail, a puff of fur) join it, specks are dropped.
+    const cw = W / 4, chh = H / rows;
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let col = 0; col < 4; col++) cells.push({ r, col, parts: [] });
+    const big = comps.filter((c) => c.n > 3000);
+    for (const c of big) {
+      const col = clamp(Math.floor(c.sx / c.n / cw), 0, 3), r = clamp(Math.floor(c.sy / c.n / chh), 0, rows - 1);
+      cells[r * 4 + col].parts.push(c);
+    }
+    for (const cell of cells) cell.parts.sort((a, b) => b.n - a.n);
+    for (const c of comps) {
+      if (c.n <= 3000 && c.n > 40) {
+        // attach to the closest main shape if it sits right next to it
+        let best = null, bd = 14;
+        for (const cell of cells) {
+          const m = cell.parts[0]; if (!m) continue;
+          const dx = Math.max(m.x0 - c.x1, c.x0 - m.x1, 0), dy = Math.max(m.y0 - c.y1, c.y0 - m.y1, 0);
+          const dd = Math.max(dx, dy);
+          if (dd < bd) { bd = dd; best = cell; }
+        }
+        if (best) best.parts.push(c);
+      }
+    }
+    return cells.map((cell) => {
+      const main = cell.parts[0];
+      if (!main) return null;
+      const keep = new Set(cell.parts.filter((c, i) => i === 0 || c.n < 3000 || c.n > main.n * 0.15).map((c) => c.id));
+      let x0 = W, y0 = H, x1 = 0, y1 = 0, area = 0;
+      for (const c of cell.parts) if (keep.has(c.id)) {
+        x0 = Math.min(x0, c.x0); y0 = Math.min(y0, c.y0); x1 = Math.max(x1, c.x1); y1 = Math.max(y1, c.y1);
+        if (c === main) area = c.n;
+      }
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
+      const out = document.createElement('canvas'); out.width = w; out.height = h;
+      const o = out.getContext('2d');
+      const oi = o.createImageData(w, h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const k = y * W + x;
+        if (!keep.has(lab[k])) continue;
+        const si = k * 4, di = ((y - y0) * w + (x - x0)) * 4, a = d[si + 3] / 255;
+        // Composite over white so see-through bodies become solid.
+        oi.data[di] = d[si] * a + 255 * (1 - a); oi.data[di + 1] = d[si + 1] * a + 253 * (1 - a);
+        oi.data[di + 2] = d[si + 2] * a + 250 * (1 - a); oi.data[di + 3] = 255;
+      }
+      o.putImageData(oi, 0, 0);
+      return { cv: out, area };
+    });
+  }
+  // Same pixels-to-screen ratio for every frame of a character (no size jumps),
+  // and every character's body area brought to the same on-screen size.
+  function finishChar(cells) {
+    const front = cells[0];
+    // Direction and walk frames come from different sheets drawn at slightly
+    // different sizes, so each set is normalised on its own body area.
+    const refArea = (list) => { const a = list.filter(Boolean).map((c) => c.area); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : front.area; };
+    const kDir = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(0, 4))) * 3; // 3x for crisp drawing
+    const kWalk = (SPRITE_H * 0.82) / Math.sqrt(refArea(cells.slice(4))) * 3;
+    let k = kDir;
+    const shrink = (c, i) => {
+      k = i >= 4 ? kWalk : kDir;
+      if (!c) return front.cv;
+      const out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(c.cv.width * k)); out.height = Math.max(1, Math.round(c.cv.height * k));
+      const o = out.getContext('2d'); o.imageSmoothingQuality = 'high';
+      o.drawImage(c.cv, 0, 0, out.width, out.height);
+      return out;
+    };
+    return { front: shrink(cells[0], 0), left: shrink(cells[1], 1), right: shrink(cells[2], 2), back: shrink(cells[3], 3), walk: cells.slice(4).map((c, i) => shrink(c, 4 + i)) };
+  }
+  function loadImg(src) {
+    return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error(`can't load ${src}`)); i.src = src; });
+  }
+  async function spriteConfig() {
+    for (const base of ['/assets/chars/', '/assets/chars-example/']) {
+      const r = await fetch(base + 'chars.json').catch(() => null);
+      if (!r || !r.ok) continue;
+      const cfg = await r.json();
+      if (cfg.enabled === false) return [];
+      return (cfg.sheets || []).map((s) => ({ dir: base + s.dir, walk: base + s.walk, rows: s.rows || 1 }));
+    }
+    return [];
+  }
+  const spritesReady = spriteConfig().then((sheets) => Promise.all(sheets.map(async (s) => {
+    const [dir, walk] = await Promise.all([loadImg(s.dir), loadImg(s.walk)]);
+    const dc = cutSheet(dir, s.rows), wc = cutSheet(walk, s.rows);
+    const list = [];
+    for (let r = 0; r < s.rows; r++) list.push(finishChar([...dc.slice(r * 4, r * 4 + 4), ...wc.slice(r * 4, r * 4 + 4)]));
+    return list;
+  }))).then((groups) => { for (const g of groups) CHARS.push(...g); }).catch((e) => console.error('sprites', e));
+
   function palette() {
     const dark = matchMedia('(prefers-color-scheme: dark)').matches;
     return dark ? {
@@ -81,17 +251,17 @@
       text: '#ecebe6', tagBg: 'rgba(20,20,19,.78)', bubble: '#f4f3ee', bubbleInk: '#1c1c1a',
       plant: '#4f8a52', pot: '#9a5b3c', shadow: 'rgba(0,0,0,.28)', book: ['#c96442', '#3b8ee0', '#5f9a4c', '#c9a24c', '#8b6be6'],
     } : {
-      dark: false,
-      wood1: '#e6d3b6', wood2: '#dfcaab', woodLine: 'rgba(120,90,50,.12)',
-      tileA: '#f4f4f1', tileB: '#e6e7e3', carpet: '#c9d3dc', carpetLine: 'rgba(0,0,0,.035)',
-      wallL: '#f4efe6', wallR: '#e8e1d4', wallTop: '#fbf8f2', trim: '#cfc5b3',
-      deskTop: '#c89f72', deskL: '#a8825a', deskR: '#946f4b',
-      monitor: '#2a2a2e', screenOff: '#3a3d44', chair: '#4a4a52',
-      rug: '#c4d4cb', rugEdge: '#a9bcb1', couch: '#7d93c4', couchD: '#6a80b0',
-      counter: '#fbfaf7', counterL: '#d9d4c9', counterR: '#c9c3b6', metal: '#b5bcc4',
-      glass: 'rgba(170,210,235,.16)', glassEdge: 'rgba(120,160,190,.55)', mat: '#bfd8c4',
-      text: '#1c1c1a', tagBg: 'rgba(255,255,255,.9)', bubble: '#ffffff', bubbleInk: '#1c1c1a',
-      plant: '#5a9b5d', pot: '#b86f4b', shadow: 'rgba(60,40,20,.18)', book: ['#c96442', '#3b8ee0', '#5f9a4c', '#c9a24c', '#8b6be6'],
+      dark: false, cute: true, ink: '#6b4a3a',
+      wood1: '#fbe3cf', wood2: '#f7d8c2', woodLine: 'rgba(160,110,80,.10)',
+      tileA: '#fff7ec', tileB: '#fde3e6', carpet: '#d8ecf7', carpetLine: 'rgba(120,160,190,.10)',
+      wallL: '#fff3e4', wallR: '#fde6df', wallTop: '#fffaf3', trim: '#e9c9b4',
+      deskTop: '#f6d5a8', deskL: '#e8bf8c', deskR: '#dcae7a',
+      monitor: '#7a6a7e', screenOff: '#a99bb0', chair: '#f2b8c6',
+      rug: '#d6efd9', rugEdge: '#a8d3b0', couch: '#b9d4f4', couchD: '#9fbfe6',
+      counter: '#fffdf8', counterL: '#f1e2d2', counterR: '#e7d3c1', metal: '#d8d4e4',
+      glass: 'rgba(190,225,245,.22)', glassEdge: 'rgba(140,180,210,.55)', mat: '#cdeccf',
+      text: '#5b4032', tagBg: 'rgba(255,252,246,.94)', bubble: '#fffdf8', bubbleInk: '#5b4032',
+      plant: '#8fd19a', pot: '#f4a9a0', shadow: 'rgba(120,80,60,.14)', book: ['#f7a6b8', '#a7c8f2', '#b5e0b0', '#f8d98b', '#cdb6f0'],
     };
   }
 
@@ -532,6 +702,32 @@
           if (p.napDesk && takenDesks.has(p.napDesk)) { this.release(p); p.path = []; }
         }
       }
+      // Custom characters: give each real session its own character, then let
+      // every character nobody is using wander around as an extra.
+      if (CHARS.length) {
+        const real = [...shown].map((k) => this.people.get(k));
+        const taken = new Set(real.map((p) => p.charIdx).filter((i) => i != null));
+        for (const p of real) {
+          if (p.charIdx != null) continue;
+          let i = p.h % CHARS.length;
+          for (let k = 0; k < CHARS.length && taken.has(i); k++) i = (i + 1) % CHARS.length;
+          p.charIdx = i;
+          taken.add(i);
+        }
+        for (let i = 0; i < CHARS.length; i++) {
+          if (taken.has(i)) continue;
+          const key = `npc:${i}`;
+          shown.add(key);
+          let p = this.people.get(key);
+          if (!p) {
+            p = this.newPerson({ key, status: 'done', npc: true, agent: 'claude', title: '' });
+            p.charIdx = i;
+            this.people.set(key, p);
+          }
+          p.leaving = false;
+          if (p.mode !== 'wander') { p.mode = 'wander'; p.desk = null; p.poi = null; p.until = 0; }
+        }
+      }
       for (const [k, p] of this.people) {
         if (!shown.has(k) && !p.leaving) {
           p.leaving = true;
@@ -673,20 +869,40 @@
 
     // ------------------------------------------------------------ primitives
 
-    poly(pts, fill, stroke) {
+    poly(pts, fill, stroke, lw = 1) {
       const c = this.ctx;
       c.beginPath();
       pts.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
       c.closePath();
-      if (fill) { c.fillStyle = fill; c.fill(); }
-      if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1; c.stroke(); }
+      if (fill) { c.fillStyle = this.soft(fill); c.fill(); }
+      if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.lineJoin = 'round'; c.stroke(); }
+    }
+
+    // Cute palette: pull saturated hard-coded colours toward a warm cream.
+    soft(color) {
+      if (!this.pal.cute || typeof color !== 'string') return color;
+      let r0, g0, b0;
+      if (color[0] === '#' && color.length === 7) {
+        const n = parseInt(color.slice(1), 16);
+        r0 = n >> 16; g0 = (n >> 8) & 255; b0 = n & 255;
+      } else {
+        const m = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(color);
+        if (!m) return color;
+        [r0, g0, b0] = [+m[1], +m[2], +m[3]];
+      }
+      const sat = Math.max(r0, g0, b0) - Math.min(r0, g0, b0), lum = (r0 + g0 + b0) / 3;
+      // Dark and saturated colours get pulled further so nothing looks heavy.
+      const k = lum < 90 ? 0.55 : sat > 90 ? 0.5 : 0.3;
+      const m = (v, w) => Math.round(v + (w - v) * k);
+      return `rgb(${m(r0, 255)},${m(g0, 248)},${m(b0, 238)})`;
     }
 
     box(x, y, z, w, d, h, top, left, right) {
       const P = (a, b, cc) => this.iso(a, b, cc);
-      this.poly([P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], left);
-      this.poly([P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)], right);
-      this.poly([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], top);
+      const ink = this.pal.cute && (w > 0.12 || d > 0.12) && h > 0.04 ? this.pal.ink : null;
+      this.poly([P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], left, ink, 0.9);
+      this.poly([P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)], right, ink, 0.9);
+      this.poly([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], top, ink, 0.9);
     }
 
     shade(color, amt) {
@@ -757,8 +973,16 @@
       this.poly([P(pp.x0 - 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y + 1.3), P(pp.x0 - 0.6, pp.y + 1.3)], pal.mat);
 
       // walls
-      this.poly([P(0, 0, 0), P(W, 0, 0), P(W, 0, WALL_H), P(0, 0, WALL_H)], pal.wallL);
-      this.poly([P(0, 0, 0), P(0, D, 0), P(0, D, WALL_H), P(0, 0, WALL_H)], pal.wallR);
+      const wInk = pal.cute ? pal.ink : null;
+      this.poly([P(0, 0, 0), P(W, 0, 0), P(W, 0, WALL_H), P(0, 0, WALL_H)], pal.wallL, wInk, 1.4);
+      this.poly([P(0, 0, 0), P(0, D, 0), P(0, D, WALL_H), P(0, 0, WALL_H)], pal.wallR, wInk, 1.4);
+      if (pal.cute) {
+        const c = this.ctx;
+        const dot = (q, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(q.x, q.y, 2.2, 2.2, 0, 0, Math.PI * 2); c.fill(); };
+        for (let x = 0.4, i = 0; x < W; x += 0.8, i++) for (let z = 0.45 + (i % 2) * 0.35; z < WALL_H - 0.2; z += 0.7) dot(P(x, 0, z), i % 3 ? '#fbd3dc' : '#cfe4f7');
+        for (let y = 0.4, i = 0; y < D; y += 0.8, i++) for (let z = 0.45 + (i % 2) * 0.35; z < WALL_H - 0.2; z += 0.7) dot(P(0, y, z), i % 3 ? '#fff0c9' : '#d9f0dc');
+        this.poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], null, pal.ink, 1.4);
+      }
       this.poly([P(0, 0, WALL_H), P(W, 0, WALL_H), P(W, -0.15, WALL_H), P(-0.15, -0.15, WALL_H), P(-0.15, D, WALL_H), P(0, D, WALL_H)], pal.wallTop);
       this.poly([P(0, 0, 0), P(W, 0, 0), P(W, 0, 0.12), P(0, 0, 0.12)], pal.trim);
       this.poly([P(0, 0, 0), P(0, D, 0), P(0, D, 0.12), P(0, 0, 0.12)], pal.trim);
@@ -1208,6 +1432,7 @@
       if (st.act === 'pingpong') x += Math.sin(t * 7 + p.phase) * 4;
       if (st.act === 'foosball') x += Math.sin(t * 5 + p.phase) * 1.5;
       const sc = s.subagent ? 0.8 : 1;
+      if (CHARS.length) return this.spritePerson(p, st, s, x, b.y, fb, sc, t, moving, seated, front);
       c.save();
       c.translate(x, y);
       c.scale(sc, sc);
@@ -1334,7 +1559,62 @@
       return { x, y: headTop, act: st.act };
     }
 
+    spritePerson(p, st, s, x, baseY, fb, sc, t, moving, seated, front) {
+      const c = this.ctx;
+      if (p.charIdx == null) {
+        // Prefer the hash's pick, but skip characters someone in the office already has.
+        const used = new Set([...this.people.values()].map((q) => q.charIdx));
+        let i = p.h % CHARS.length;
+        for (let k = 0; k < CHARS.length && used.has(i); k++) i = (i + 1) % CHARS.length;
+        p.charIdx = i;
+      }
+      const ch = CHARS[p.charIdx];
+      let img, flip = false, dy = 0, tilt = 0, sq = 1;
+      if (moving && front) {
+        // 4 walk frames face left; mirror them when heading right on screen.
+        img = ch.walk[Math.floor(t * 8 + p.phase) % 4];
+        flip = p.walkSide === 'right';
+        dy = -Math.abs(Math.sin(t * 12 + p.phase)) * 2;
+      } else if (moving) {
+        img = ch.back;
+        dy = -Math.abs(Math.sin(t * 12 + p.phase)) * 2;
+        tilt = Math.sin(t * 12 + p.phase) * 0.06;
+      } else if (!front) {
+        img = ch.back;
+      } else {
+        img = ch.front;
+      }
+      switch (st.act) {
+        case 'type': dy -= Math.max(0, Math.sin(t * 18 + p.phase)) * 1.2; break;
+        case 'think': tilt = Math.sin(t * 1.5 + p.phase) * 0.08; break;
+        case 'wave': dy -= Math.abs(Math.sin(t * 6 + p.phase)) * 5; break;
+        case 'nap': tilt = 0.35; sq = 0.92; break;
+        case 'pingpong': case 'foosball': case 'arcade':
+          img = Math.sin(t * 3 + p.phase) > 0 ? ch.left : ch.right; dy -= Math.abs(Math.sin(t * 9 + p.phase)) * 2; break;
+        case 'coffee': case 'water': case 'read': case 'phone': case 'whiteboard':
+          tilt = Math.sin(t * 0.9 + p.phase) * 0.05; break;
+        default:
+          if (!moving && front && st.pose === 'stand') sq = 1 + Math.sin(t * 2 + p.phase) * 0.02; // breathing
+      }
+      const H = img.height / 3 * sc, W = img.width / 3 * sc;
+      const footY = baseY + (seated ? 4 : 2);
+      c.save();
+      c.translate(x, footY + dy);
+      c.rotate(tilt);
+      c.scale(flip ? -1 : 1, sq);
+      c.drawImage(img, -W / 2, -H, W, H);
+      c.restore();
+      if (s.status === 'error' && p.mode === 'work') {
+        c.fillStyle = '#e04848'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
+        c.fillText('!', x + W / 2, footY - H + 4);
+      }
+      const headTop = footY + dy - H + 6;
+      if (!s.npc) this.hit.push({ key: p.key, x0: x - W / 2, x1: x + W / 2, y0: headTop - 22, y1: fb.y + 4 });
+      return { x, y: headTop, act: st.act };
+    }
+
     bubble(p, at) {
+      if (p.s && p.s.npc) return; // extras have no session to label
       const c = this.ctx;
       const t = this.t / 1000;
       const s = p.s || {};
@@ -1551,7 +1831,7 @@
         if (p.path.length) {
           const n = p.path[0];
           const dx = n.x - p.x, dy = n.y - p.y, d = Math.hypot(dx, dy), v = SPEED * dt;
-          if (d > 0.001) p.walkFace = dx + dy >= 0 ? 'front' : 'back';
+          if (d > 0.001) { p.walkFace = dx + dy >= 0 ? 'front' : 'back'; p.walkSide = dx - dy >= 0 ? 'right' : 'left'; }
           if (d <= v) { p.x = n.x; p.y = n.y; p.path.shift(); }
           else { p.x += (dx / d) * v; p.y += (dy / d) * v; }
         } else if (p.leaving) {
