@@ -395,6 +395,19 @@
   body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
   body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 1.1em; height: 1.1em; }
   html:hover body.float .float-stats { top: 58px; }
+  /* Agent tab sits below the token badge instead of behind it. */
+  html body.float .side-tab { top: 100px; }
+  /* Narrow window: keep the title (it shortens with …) and the button labels, all on one row. */
+  html body.float header { flex-wrap: nowrap; gap: 8px; }
+  html body.float .controls { flex: none; flex-wrap: nowrap; margin-left: auto; padding-top: 0; gap: 6px; }
+  html body.float header h1 { display: block; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html body.float .today-tokens, html body.float #langName,
+  html body.float #todayMenu > summary [data-t], html body.float #settingsMenu > summary [data-t] { display: revert; }
+  @media (max-width: 379px) { html body.float header h1 { display: none; } }
+  @media (max-width: 559px) {
+    html body.float .today-tokens, html body.float #langName,
+    html body.float #todayMenu > summary [data-t], html body.float #settingsMenu > summary [data-t] { display: none; }
+  }
   /* Agent panel open: hide the badge so the panel's back/close buttons stay clickable. */
   html:hover body.float:not(.side-closed) .float-stats { display: none; }
   body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
