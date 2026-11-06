@@ -2,7 +2,7 @@
 
 # whatsmyagentdoing
 
-> **귀여운 오피스 버전:** 파스텔 2D 오피스와 직접 넣는 캐릭터 그림을 지원해요. 설치와 캐릭터 넣는 법은 [CHARACTERS.md](CHARACTERS.md)를 보세요.
+> **귀여운 오피스 버전:** 파스텔 2D 오피스와 직접 넣는 캐릭터 그림을 지원해요. 설치와 캐릭터 넣는 법은 [CHARACTERS.md](CHARACTERS.md), Windows는 [Windows 설치 가이드](desktop/windows/README.md)를 보세요.
 
 **A Claude Code / Codex skill: type `/myoffice` and see what every Claude Code, Codex, Gemini CLI, Antigravity CLI, Copilot CLI, OMP (oh-my-pi), Kimi Code, DeepSeek Harness, Grok Build, OpenCode and Hermes agent on your machine is doing — live, in a little office.**
 

@@ -89,6 +89,7 @@ Xcode 명령줄 도구가 필요해요(`xcode-select --install`). 빌드하면 `
 ## 바탕화면에 띄우기 (Windows)
 
 Mac 앱과 같은 투명 창이에요. [Node.js](https://nodejs.org) 18 이상이 필요해요.
+**처음부터 설치하는 전체 방법은 [Windows 설치 가이드](desktop/windows/README.md)를 보세요.**
 
 1. 파일 탐색기에서 `%USERPROFILE%\.claude\skills\myoffice\desktop\windows` 폴더를 열어요.
 2. **`start.bat`** 을 더블클릭해요.
