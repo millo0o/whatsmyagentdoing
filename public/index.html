@@ -384,6 +384,15 @@
     background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
   }
   .float-stats { display: none; }
+  .float-update { display: none; }
+  body.float .float-update:not([hidden]) {
+    display: block; position: fixed; z-index: 31; left: 10px; top: 8px; padding: 5px 12px; cursor: pointer;
+    font: 700 clamp(12px, 1.6vw, 14px) ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: #fff; background: #e0614f; border: 1.5px solid #c44d3e; border-radius: 999px; box-shadow: 0 2px 8px #6b4a3a33;
+    animation: fuPulse 2s ease-in-out infinite;
+  }
+  html:hover body.float .float-update:not([hidden]) { top: 64px; }
+  @keyframes fuPulse { 50% { transform: scale(1.06); } }
   body.float .float-stats {
     display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; align-items: center;
     position: fixed; z-index: 29; top: 8px; right: 10px; max-width: 70%; padding: 5px 12px;
@@ -507,6 +516,7 @@
 </div>
 <div class="conn" id="conn" data-t="disconnected"></div>
 <div class="float-stats" id="floatStats" hidden></div>
+<button class="float-update" id="floatUpdate" hidden></button>
 <div class="tip" id="tip"></div>
 <div class="ver" id="ver"></div>
 <script src="/i18n.js"></script>
@@ -1121,16 +1131,28 @@ let verInfo = null;
 function renderVersion() {
   if (!verInfo) return;
   let html = `<span>v${esc(verInfo.version)}</span>`;
+  // The cute-office fork counts new commits on GitHub instead of release numbers.
+  const newLabel = verInfo.fork ? `${verInfo.behind}` : `v${verInfo.latest}`;
   if (verInfo.updateAvailable) {
     html = verInfo.canUpdate
-      ? `<button id="updBtn">⬆ ${esc(L.update)} v${esc(verInfo.latest)}</button>` + html
+      ? `<button id="updBtn">⬆ ${esc(L.update)} ${verInfo.fork ? `(${esc(newLabel)})` : esc(newLabel)}</button>` + html
       : `<span>${esc(L.gitPull)} → v${esc(verInfo.latest)}</span>` + html;
   }
   verEl.innerHTML = html;
   // a second, more visible way in, next to the title
   const top = document.getElementById('newVer');
   top.hidden = !(verInfo.updateAvailable && verInfo.canUpdate);
-  if (!top.hidden && !top.disabled) top.textContent = `⬆ ${L.newVersion} v${verInfo.latest}`;
+  if (!top.hidden && !top.disabled) top.textContent = verInfo.fork ? `⬆ ${L.newVersion}` : `⬆ ${L.newVersion} v${verInfo.latest}`;
+  // Floating window: the toolbar only shows on hover, so give the update its own pill.
+  const fu = document.getElementById('floatUpdate');
+  if (fu) {
+    fu.hidden = top.hidden;
+    if (!fu.hidden && !fu.disabled) {
+      fu.textContent = `⬆ ${L.newVersion}${verInfo.fork && verInfo.behind ? ` · ${verInfo.behind}` : ''}`;
+      fu.title = verInfo.subject || '';
+    }
+    fu.onclick = () => { const b2 = document.getElementById('updBtn'); if (b2) { fu.disabled = true; fu.textContent = L.updating; b2.click(); } };
+  }
   top.onclick = () => { const b2 = document.getElementById('updBtn'); if (b2) { top.disabled = true; top.textContent = L.updating; b2.click(); } };
   const b = document.getElementById('updBtn');
   if (b) b.onclick = async () => {
@@ -1140,10 +1162,11 @@ function renderVersion() {
     b.textContent = L.updated;
     // the server restarts itself; reload once it answers again
     const t0 = Date.now();
+    let wentDown = false;
     const wait = setInterval(() => {
       fetch('/api/version', { cache: 'no-store' }).then((x) => x.json()).then((v) => {
-        if (v.version !== verInfo.version || Date.now() - t0 > 20000) { clearInterval(wait); location.reload(); }
-      }).catch(() => {});
+        if (v.version !== verInfo.version || wentDown || Date.now() - t0 > 20000) { clearInterval(wait); location.reload(); }
+      }).catch(() => { wentDown = true; });
     }, 1000);
   };
 }

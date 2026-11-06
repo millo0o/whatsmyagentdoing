@@ -25,7 +25,28 @@ function newer(a, b) {
   return false;
 }
 
-const state = { latest: null, checkedAt: 0, checking: null };
+const state = { latest: null, checkedAt: 0, checking: null, behind: 0, subject: '' };
+
+// The cute-office fork has no releases: it checks the GitHub branch it was
+// cloned from instead (git fetch, then count commits we don't have yet).
+const FORK_BRANCH = 'cute-office';
+function git(args, timeout = 20000) {
+  return new Promise((resolve) => {
+    execFile('git', ['-C', ROOT, ...args], { timeout }, (err, stdout) => resolve(err ? null : String(stdout).trim()));
+  });
+}
+let forkMode = null;
+async function isFork() {
+  if (forkMode == null) forkMode = canUpdate() && (await git(['rev-parse', '--abbrev-ref', 'HEAD'])) === FORK_BRANCH && !!(await git(['rev-parse', '--abbrev-ref', '@{u}']));
+  return forkMode;
+}
+async function fetchForkLatest() {
+  if ((await git(['fetch', '--quiet'], 30000)) == null) return null;
+  const n = Number(await git(['rev-list', '--count', 'HEAD..@{u}']));
+  state.behind = Number.isFinite(n) ? n : 0;
+  state.subject = state.behind ? (await git(['log', '-1', '--format=%s', '@{u}'])) || '' : '';
+  return (await git(['rev-parse', '--short', '@{u}'])) || 'latest';
+}
 
 function fetchLatest() {
   return new Promise((resolve) => {
@@ -45,7 +66,7 @@ async function checkLatest(force = false) {
   if (process.env.WMAD_LATEST_VERSION) { state.latest = process.env.WMAD_LATEST_VERSION; return state.latest; } // for testing
   if (!force && state.latest && Date.now() - state.checkedAt < CHECK_EVERY) return state.latest;
   if (!state.checking) {
-    state.checking = fetchLatest().then((v) => {
+    state.checking = (await isFork() ? fetchForkLatest() : fetchLatest()).then((v) => {
       if (v) { state.latest = v; state.checkedAt = Date.now(); }
       state.checking = null;
       return state.latest;
@@ -60,6 +81,9 @@ function canUpdate() {
 
 function info() {
   const version = localVersion();
+  if (forkMode) {
+    return { version, latest: state.latest, updateAvailable: state.behind > 0, canUpdate: true, fork: true, behind: state.behind, subject: state.subject };
+  }
   return {
     version,
     latest: state.latest,
@@ -73,6 +97,7 @@ function update() {
     if (!canUpdate()) return reject(new Error(`not a git clone (${ROOT}); reinstall it with git clone to get updates`));
     execFile('git', ['-C', ROOT, 'pull', '--ff-only', '--quiet'], { timeout: 60000 }, (err, stdout, stderr) => {
       if (err) return reject(new Error(String(stderr || err.message).trim()));
+      state.behind = 0; state.subject = '';
       resolve(localVersion());
     });
   });
