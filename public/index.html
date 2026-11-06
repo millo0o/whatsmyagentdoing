@@ -383,19 +383,6 @@
     position: fixed; z-index: 30; top: 8px; left: 8px; right: 8px; margin: 0; padding: 6px 10px;
     background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
   }
-  /* Floating window: title shrinks first, and the buttons keep their
-     labels until the window is really narrow. */
-  body.float .summary { display: none !important; }
-  body.float header { left: 8px; }
-  html body.float header { flex-wrap: nowrap; gap: 8px; }
-  html body.float .controls { flex: none; flex-wrap: nowrap; margin-left: auto; padding-top: 0; gap: 6px; }
-  body.float header h1 { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  @media (max-width: 559px) { body.float header h1 { display: none; } body.float header { left: auto; } }
-  @media (min-width: 560px) {
-    html body.float header h1 { display: block; }
-    html body.float .today-tokens, html body.float #langName,
-    html body.float #todayMenu > summary [data-t], html body.float #settingsMenu > summary [data-t] { display: revert; }
-  }
   .float-stats { display: none; }
   body.float .float-stats {
     display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; align-items: center;
@@ -407,15 +394,12 @@
   body.float .float-stats b { font-weight: 800; }
   body.float .float-stats .fs-row { display: inline-flex; align-items: center; gap: 3px; opacity: .85; }
   body.float .float-stats .fs-row img, body.float .float-stats .fs-row svg { width: 1.1em; height: 1.1em; }
-  /* The window keeps a see-through strip on top for the toolbar (row 1) and the
-     token badge + agent tab (row 2), so they never cover the room. */
-  html:hover body.float .float-stats { top: 64px; left: 10px; right: auto; justify-content: flex-start; max-width: calc(100vw - 150px); }
-  /* Agent panel open: keep the badge off its header (back/close buttons). */
-  html:hover body.float:not(.side-closed) .float-stats { max-width: calc(100vw - min(340px, 88vw) - 20px); }
-  @media (max-width: 620px) { html:hover body.float:not(.side-closed) .float-stats { display: none; } }
+  html:hover body.float .float-stats { top: 58px; }
+  /* Agent panel open: hide the badge so the panel's back/close buttons stay clickable. */
+  html:hover body.float:not(.side-closed) .float-stats { display: none; }
   body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
-  body.float #officeWrap { position: fixed; inset: 104px 0 0 0; }
-  body.float .office { height: 100% !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
+  body.float #officeWrap { position: fixed; inset: 0; }
+  body.float .office { height: 100vh !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
   body.pip #officeWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   body.pip .office { flex: 1; height: auto; min-height: 120px; }
   body.pip #main { overflow: auto; min-height: 0; }
