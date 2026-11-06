@@ -72,6 +72,9 @@ final class HoverFrame: NSView {
   override func hitTest(_ point: NSPoint) -> NSView? { nil } // clicks go to the office
 }
 
+// Width / height of the room, reported by the page; the window keeps this shape.
+var roomAspect: CGFloat = 1.6
+
 // Keep the whole window (and its resize corner) on the visible screen.
 func fitOnScreen(_ r: NSRect) -> NSRect {
   let mid = NSPoint(x: r.midX, y: r.midY)
@@ -107,7 +110,7 @@ final class ResizeGrip: NSView {
       if e.type == .leftMouseUp { break }
       let now = NSEvent.mouseLocation
       let w = max(260, startFrame.width + (now.x - start.x))
-      let h = max(200, startFrame.height - (now.y - start.y))
+      let h = w / roomAspect
       win.setFrame(fitOnScreen(NSRect(x: startFrame.minX, y: startFrame.maxY - h, width: w, height: h)), display: true)
     }
   }
@@ -117,7 +120,17 @@ final class FloatPanel: NSPanel {
   override var canBecomeKey: Bool { true }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSMenuDelegate, WKScriptMessageHandler {
+  func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard message.name == "aspect", let a = message.body as? Double, a > 0.3, a < 5 else { return }
+    roomAspect = CGFloat(a)
+    // Snap the window to the room's shape, keeping its width and top edge.
+    var f = panel.frame
+    let h = f.width / roomAspect
+    f.origin.y += f.height - h
+    f.size.height = h
+    panel.setFrame(fitOnScreen(f), display: true)
+  }
   // Rebuild the menu bar menu each time so checkmarks are current.
   func menuNeedsUpdate(_ menu: NSMenu) {
     menu.removeAllItems()
@@ -149,6 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     panel.setFrame(fitOnScreen(panel.frame), display: false)
 
     let config = WKWebViewConfiguration()
+    config.userContentController.add(self, name: "aspect")
     let root = NSView(frame: panel.contentView!.bounds)
     root.autoresizingMask = [.width, .height]
     let hover = HoverFrame(frame: root.bounds)
@@ -170,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     panel.orderFrontRegardless()
 
     buildMenu()
+    watchServer()
   }
 
   // Start the dashboard if it isn't running yet (if it is, the CLI just says so and exits).
@@ -187,8 +202,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) { retry() }
   func webView(_ w: WKWebView, didFail n: WKNavigation!, withError e: Error) { retry() }
   func retry() {
+    // The dashboard went away (e.g. its terminal closed): start our own again.
+    if server == nil || !(server!.isRunning) { startServer() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
       self?.web.load(URLRequest(url: officeURL()))
+    }
+  }
+
+  // The page also loses its server while already loaded; check every 10s.
+  func watchServer() {
+    Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+      var req = URLRequest(url: URL(string: "http://localhost:4545/")!)
+      req.timeoutInterval = 3
+      URLSession.shared.dataTask(with: req) { _, resp, _ in
+        if resp == nil { DispatchQueue.main.async { self?.retry() } }
+      }.resume()
     }
   }
 
@@ -218,7 +246,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     status.menu?.delegate = self
   }
 
-  func resize(_ w: CGFloat, _ h: CGFloat) {
+  func resize(_ w: CGFloat, _ hIgnored: CGFloat) {
+    let h = w / roomAspect
     var f = panel.frame
     f.origin.y += f.height - h
     f.size = NSSize(width: w, height: h)

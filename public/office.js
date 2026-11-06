@@ -67,6 +67,7 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // ?bare=1 (floating window): no floor or walls, just furniture and characters.
   const BARE = new URLSearchParams(location.search).get('bare') === '1';
+  const FLOATWIN = new URLSearchParams(location.search).get('float') === '1';
 
   // ---- Custom character sprites ----
   // Your own sheets go in assets/chars/ with a chars.json listing them; without
@@ -843,7 +844,14 @@
       const top = this.iso(0, 0, WALL_H).y - 20, bottom = this.iso(W, D, 0).y + 10;
       const inset = this.inset();
       const vw = Math.max(120, this.cw - inset);
-      const zoom = Math.min(vw / (right - left + 30), this.ch / (bottom - top + 30), 2);
+      // Floating window: fill it edge to edge, and tell the app the room's shape.
+      const pad = FLOATWIN ? 8 : 30;
+      const zoom = Math.min(vw / (right - left + pad), this.ch / (bottom - top + pad), FLOATWIN ? 8 : 2);
+      const aspect = (right - left + pad) / (bottom - top + pad);
+      if (FLOATWIN && aspect !== this.sentAspect) {
+        this.sentAspect = aspect;
+        try { window.webkit.messageHandlers.aspect.postMessage(aspect); } catch { /* not in the app */ }
+      }
       const want = { zoom, ox: vw / 2 - ((left + right) / 2) * zoom, oy: this.ch / 2 - ((top + bottom) / 2) * zoom };
       // While the inset eases, follow it exactly; otherwise settle gently.
       if (!this.cam || this.insetMoving()) this.cam = want;
