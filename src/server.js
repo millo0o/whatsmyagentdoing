@@ -192,6 +192,17 @@ function createServer(watcher, opts, { onShutdown, onRestart } = {}) {
     } else if (url.pathname === '/api/sessions') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify(snapshot(watcher, opts)));
+    } else if (url.pathname === '/api/float' && req.method === 'POST') {
+      // Pop out into the floating desktop app (desktop/build.sh), if it's built.
+      // Same custom-header guard as shutdown, so other sites can't trigger it.
+      const appPath = path.join(require('os').homedir(), 'Applications', 'Floating Office.app');
+      if (req.headers['x-whatsmyagentdoing'] !== 'float' || process.platform !== 'darwin' || !fs.existsSync(appPath)) {
+        res.writeHead(404).end();
+        return;
+      }
+      require('child_process').spawn('open', [appPath], { stdio: 'ignore', detached: true }).unref();
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
     } else if (url.pathname === '/api/shutdown' && req.method === 'POST') {
       // Only our CLI sends this header; a web page can't add a custom header
       // to a cross-site request without a CORS preflight, which we never allow.

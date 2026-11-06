@@ -372,8 +372,18 @@
   body.pip .summary { gap: 4px; width: auto; margin-left: 0; }
   html:has(body.float), body.float { background: transparent !important; overflow: hidden; }
   body.float { padding: 0 !important; margin: 0; }
-  body.float header, body.float .side, body.float .side-tab, body.float .legend,
-  body.float .ver, body.float .conn, body.float #main, body.float .pip-preview { display: none !important; }
+  body.float .ver, body.float #main, body.float .pip-preview, body.float #pipBtn { display: none !important; }
+  /* Toolbar, agent list and legend only show while the mouse is over the window. */
+  body.float header, body.float .side, body.float .side-tab, body.float .legend, body.float .conn {
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  html:hover body.float header, html:hover body.float .side, html:hover body.float .side-tab,
+  html:hover body.float .legend, html:hover body.float .conn { opacity: 1; pointer-events: auto; }
+  body.float header {
+    position: fixed; z-index: 30; top: 8px; left: 8px; right: 8px; margin: 0; padding: 6px 10px;
+    background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
+  }
+  body.float .legend { position: fixed; z-index: 30; left: 10px; bottom: 8px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 252, 246, .9); }
   body.float #officeWrap { position: fixed; inset: 0; }
   body.float .office { height: 100vh !important; min-height: 0; border: 0; border-radius: 0; background: transparent !important; }
   body.pip #officeWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }

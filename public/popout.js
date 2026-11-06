@@ -54,6 +54,12 @@
       this.error.hidden = true;
       if (this.win) { this.close(); return; }
       if (this.stream) { this.stopPreview(); return; }
+      // Prefer the floating desktop app: transparent, always on top, and it
+      // keeps running when the browser closes.
+      try {
+        const r = await fetch('/api/float', { method: 'POST', headers: { 'x-whatsmyagentdoing': 'float' } });
+        if (r.ok) return;
+      } catch { /* fall back to the browser pop-out */ }
       this.busy = true;
       this.changed();
       try {
