@@ -54,7 +54,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞',
+    vending: '🥤', foosball: '⚽', phone: '📞', pet: '💕',
   };
 
   function hash(str) {
@@ -451,7 +451,12 @@
       this.t = performance.now();
       this.pal = palette();
       this.plan = this.buildPlan(0);
-      this.cat = { x: this.plan.W - 3, y: this.plan.D - 2, path: [], until: 0, face: 1 };
+      // Two office cats: the ginger one and a calico.
+      this.cats = [
+        { x: this.plan.W - 3, y: this.plan.D - 2, path: [], until: 0, face: 1, coat: 'ginger' },
+        { x: 3, y: this.plan.D - 3, path: [], until: 3000, face: -1, coat: 'calico' },
+      ];
+      this.cat = this.cats[0];
       this.theme = matchMedia('(prefers-color-scheme: dark)');
       this.onTheme = () => (this.pal = palette());
       this.theme.addEventListener('change', this.onTheme);
@@ -521,10 +526,7 @@
       };
 
       // ---- cubicle pods: 4 desks back to back with a divider
-      for (let p = 0; p < pods; p++) {
-        const c = p % podCols, r = Math.floor(p / podCols);
-        const px = 1.3 + c * 4.2, py = 2.0 + r * 4.7;
-        const panel = PANEL[p % PANEL.length];
+      const pod = (px, py, panel) => {
         for (let k = 0; k < 2; k++) {
           const x = px + k * 1.5;
           desks.push({ x, y: py, side: 'n', seat: { x: x + 0.7, y: py - 0.45 } });
@@ -537,7 +539,14 @@
         prop('panel', { x: px - 0.18, y: py - 0.05, w: 0.08, d: 1.82, h: 1.15, color: panel });
         add(px - 0.1 + py + 0.86, () => this.box(px - 0.18, py - 0.05, 0, 0.08, 1.82, 1.15, this.shade(panel, 25), panel, this.shade(panel, -15)));
         solid(px - 0.18, py + 0.8, 3.25, 0.12, 0.05);
+      };
+      for (let p = 0; p < pods; p++) {
+        const c = p % podCols, r = Math.floor(p / podCols);
+        pod(1.3 + c * 4.2, 2.0 + r * 4.7, PANEL[p % PANEL.length]);
       }
+      // A smaller meeting room leaves room for one more pod next to it.
+      const GX = OW + 3.6;                         // meeting room starts here
+      pod(OW + 0.45, 2.0, PANEL[pods % PANEL.length]);
 
       // ---- open office extras
       const rx = OW - 1.15;
@@ -596,15 +605,15 @@
 
       // ---- meeting room behind glass, door at y 3.6–4.6
       const mx = OW;
-      for (const [y, d] of [[0, 1], [1, 1], [2, 1], [3, 0.6], [4.6, MR - 4.6]]) this.glassX(add, mx, y, d);
-      for (let x = mx; x < W - 0.01; x += 1) this.glassY(add, x, MR, Math.min(1, W - x));
-      prop('glass', { x: mx, y: 0, w: 0, d: 3.6 });
-      prop('glass', { x: mx, y: 4.6, w: 0, d: MR - 4.6 });
-      prop('glass', { x: mx, y: MR, w: RW, d: 0 });
-      solid(mx - 0.05, 0, 0.1, 3.6, 0.05);
-      solid(mx - 0.05, 4.6, 0.1, MR - 4.6, 0.05);
-      solid(mx, MR - 0.05, RW, 0.1, 0.05);
-      const mtx = mx + 1.6, mty = 1.7;
+      for (const [y, d] of [[0, 1], [1, 1], [2, 1], [3, 0.6], [4.6, MR - 4.6]]) this.glassX(add, GX, y, d);
+      for (let x = GX; x < W - 0.01; x += 1) this.glassY(add, x, MR, Math.min(1, W - x));
+      prop('glass', { x: GX, y: 0, w: 0, d: 3.6 });
+      prop('glass', { x: GX, y: 4.6, w: 0, d: MR - 4.6 });
+      prop('glass', { x: GX, y: MR, w: W - GX, d: 0 });
+      solid(GX - 0.05, 0, 0.1, 3.6, 0.05);
+      solid(GX - 0.05, 4.6, 0.1, MR - 4.6, 0.05);
+      solid(GX, MR - 0.05, W - GX, 0.1, 0.05);
+      const mtx = GX + 0.3, mty = 1.7;
       add(mtx + 1.5 + mty + 0.7, () => this.meetingTable(mtx, mty));
       prop('meetingTable', { x: mtx, y: mty, w: 3.0, d: 1.4 });
       solid(mtx, mty, 3.0, 1.4);
@@ -617,7 +626,7 @@
         prop('chair', { x: cx, y: mty + 1.8, face: 'back' });
         poi(cx, mty + 1.8, 'meeting', 'back', { sit: 0.42 });
       }
-      poi(mx + 3.6, 0.65, 'whiteboard', 'back');
+      poi(GX + 1.7, 0.65, 'whiteboard', 'back');
       add(W - 0.45 + 0.45, () => this.plant(W - 0.45, 0.45));
       prop('plant', { x: W - 0.45, y: 0.45 });
       solid(W - 0.65, 0.25, 0.4, 0.4);
@@ -689,7 +698,7 @@
         { y: 2.2, color: '#c96442', text: 'SHIP IT' },
         { y: 4.6, color: '#10a37f', text: 'TESTS ✓' },
       ];
-      return { W, D, OW, OD, MR, PY, RW, grid, items, props, pois, desks, windows, posters, pp, door: { x: 0.4, y: D - 1.2 } };
+      return { W, D, OW, OD, MR, PY, RW, GX, pods, grid, items, props, pois, desks, windows, posters, pp, door: { x: 0.4, y: D - 1.2 } };
     }
 
     glassX(add, x, y, d) {
@@ -722,7 +731,8 @@
 
       const cap = this.plan.desks.length;
       // Scene packs have a fixed floor plan; the built-in office grows with the team.
-      if (!this.plan.fixed && (working.length > cap - 1 || (cap > 8 && working.length < cap * 0.35))) {
+      const pods = this.plan.pods || cap / 4;
+      if (!this.plan.fixed && (working.length > cap - 1 || (pods > 2 && working.length < pods * 4 * 0.35))) {
         this.plan = this.buildPlan(working.length);
         this.deskOf.clear();
         for (const p of this.people.values()) { p.poi = null; p.napDesk = null; p.desk = null; p.until = 0; }
@@ -805,6 +815,7 @@
     }
 
     release(p) {
+      if (p.poi && p.poi.cat && p.poi.cat.petBy === p.key) { p.poi.cat.petBy = null; p.poi.cat.until = Date.now() + rand(2000, 6000); }
       if (p.poi) { p.poi.taken = null; p.poi = null; }
       if (p.napDesk) { p.napDesk.napper = null; p.napDesk = null; }
     }
@@ -848,9 +859,9 @@
         if (!p.desk || real.has(p.desk) || now > p.shiftEnd) this.endShift(p, now);
         else busy.add(p.desk);
       }
-      // Keep a desk free for real sessions, and at most ~half the extras at work.
+      // Keep a desk free for real sessions, and at most ~a third of the idle ones at work.
       const free = desks.filter((d) => !busy.has(d) && !d.napper && d.pose !== 'stand');
-      let room = Math.min(free.length - 1, Math.ceil(npcs.length / 2) - npcs.filter((p) => p.mode === 'work').length);
+      let room = Math.min(free.length - 1, Math.ceil(npcs.length / 3) - npcs.filter((p) => p.mode === 'work').length);
       for (const p of npcs) {
         if (room <= 0) break;
         if (p.mode !== 'wander' || p.path.length || now < (p.nextShift ??= now + rand(3, 25) * 1000)) continue;
@@ -895,15 +906,27 @@
         if (workingDesks.has(d) || d.napper || d.npcWorker) continue;
         weighted.push([{ x: d.seat.x, y: d.seat.y, act: 'nap', face: d.side === 'n' ? 'front' : 'back', sit: 0.34, desk: d }, sleepy ? 3 : 0.25]);
       }
+      // A resting cat nobody is petting can be petted (stand beside it).
+      for (const k of this.cats || []) {
+        if (k.path.length || k.petBy) continue;
+        // Stand beside it on screen (same depth), not in front where the body would hide it.
+        for (const [dx, dy] of [[0.75, -0.75], [-0.75, 0.75]]) {
+          const sx = k.x + dx, sy = k.y + dy;
+          if (sx < 0.4 || sx > plan.W - 0.4 || plan.grid.blocked(sx, sy)) continue;
+          weighted.push([{ x: sx, y: sy, act: 'pet', face: 'front', cat: k }, 1.6]);
+          break;
+        }
+      }
       if (!weighted.length) return;
       let r = Math.random() * weighted.reduce((a, [, w]) => a + w, 0);
       let choice = weighted[0][0];
       for (const [q, w] of weighted) { r -= w; if (r <= 0) { choice = q; break; } }
       if (choice.desk) { choice.desk.napper = p.key; p.napDesk = choice.desk; }
+      if (choice.cat) { choice.cat.petBy = p.key; choice.cat.until = Infinity; }
       choice.taken = p.key;
       p.poi = choice;
       p.until = Infinity; // set on arrival
-      p.stay = (choice.act === 'nap' ? rand(25, 60) : choice.act === 'pingpong' ? rand(15, 30) : rand(8, 20)) * 1000;
+      p.stay = (choice.act === 'nap' ? rand(25, 60) : choice.act === 'pingpong' ? rand(15, 30) : choice.act === 'pet' ? rand(6, 12) : rand(8, 20)) * 1000;
       this.goTo(p, choice);
     }
 
@@ -1056,6 +1079,7 @@
     drawRoom() {
       if (BARE) return;
       const { W, D, OW, MR, PY, pp } = this.plan;
+      const GX = this.plan.GX || OW;
       const pal = this.pal;
       const P = (x, y, z) => this.iso(x, y, z);
       const t = this.t / 1000;
@@ -1068,8 +1092,14 @@
         }
       }
       for (let y = 0.5; y < D; y += 0.5) this.poly([P(0, y), P(OW, y), P(OW, y + 0.012), P(0, y + 0.012)], pal.woodLine);
-      this.poly([P(OW, 0), P(W, 0), P(W, MR), P(OW, MR)], pal.carpet);
-      for (let x = OW + 0.5; x < W; x += 0.5) this.poly([P(x, 0), P(x + 0.015, 0), P(x + 0.015, MR), P(x, MR)], pal.carpetLine);
+      for (let x = OW; x < GX - 0.01; x++) {
+        for (let y = 0; y < Math.ceil(MR); y++) {
+          const x1 = Math.min(GX, x + 1), y1 = Math.min(MR, y + 1);
+          this.poly([P(x, y), P(x1, y), P(x1, y1), P(x, y1)], (Math.floor(x) + y) % 2 ? pal.wood1 : pal.wood2);
+        }
+      }
+      this.poly([P(GX, 0), P(W, 0), P(W, MR), P(GX, MR)], pal.carpet);
+      for (let x = GX + 0.5; x < W; x += 0.5) this.poly([P(x, 0), P(x + 0.015, 0), P(x + 0.015, MR), P(x, MR)], pal.carpetLine);
       for (let i = 0; i < Math.ceil((W - OW) * 2); i++) {
         for (let j = 0; j < Math.ceil((PY - MR) * 2); j++) {
           const x = OW + i / 2, y = MR + j / 2;
@@ -1121,7 +1151,7 @@
         this.poly([P(x, 0.05), P(x + 1.5, 0.05), P(x + 1.95, 1.2), P(x + 0.45, 1.2)], sky.night ? 'rgba(120,140,200,.06)' : 'rgba(255,250,230,.16)');
       }
       // meeting room whiteboard + sign
-      const wx = OW + 2.4;
+      const wx = GX + 0.5;
       this.poly([P(wx, 0, 0.8), P(wx + 2.6, 0, 0.8), P(wx + 2.6, 0, 1.95), P(wx, 0, 1.95)], '#fdfdfb', pal.trim);
       this.onWall('y0', wx + 0.25, 1.75, (c) => {
         c.lineWidth = 1.4;
@@ -1133,7 +1163,7 @@
         c.strokeStyle = '#5f9a4c';
         c.beginPath(); c.moveTo(0, 22); for (let i = 0; i < 8; i++) c.lineTo(i * 8, 22 - ((i * 37) % 13)); c.stroke();
       });
-      this.onWall('y0', OW + 0.5, 2.2, (c) => {
+      this.onWall('y0', GX + 0.3, 2.2, (c) => {
         c.font = '700 9px ui-sans-serif, system-ui, sans-serif'; c.fillStyle = this.shade(pal.trim, -60); c.fillText('MEETING', 0, 0);
       });
       // left wall: posters, clock, door
@@ -1704,6 +1734,15 @@
         case 'think': tilt = Math.sin(t * 1.5 + p.phase) * 0.08; break;
         case 'wave': dy -= Math.abs(Math.sin(t * 6 + p.phase)) * 5; break;
         case 'nap': tilt = 0.35; sq = 0.92; break;
+        case 'pet': {
+          // Face the cat and give it gentle pats.
+          const k = p.poi && p.poi.cat;
+          if (k) img = (k.x - p.x) - (k.y - p.y) >= 0 ? ch.right : ch.left;
+          dy -= Math.abs(Math.sin(t * 5 + p.phase)) * 1.5;
+          tilt = Math.sin(t * 5 + p.phase) * 0.06;
+          sq = 1 - Math.abs(Math.sin(t * 5 + p.phase)) * 0.03;
+          break;
+        }
         case 'pingpong': case 'foosball': case 'arcade':
           img = Math.sin(t * 3 + p.phase) > 0 ? ch.left : ch.right; dy -= Math.abs(Math.sin(t * 9 + p.phase)) * 2; break;
         case 'coffee': case 'water': case 'read': case 'phone': case 'whiteboard':
@@ -1877,9 +1916,9 @@
       c.restore();
     }
 
-    moveCat(dt, now) {
-      const k = this.cat;
-      if (!k.path.length && now > k.until) {
+    moveCat(dt, now, k = this.cat) {
+      if (k.petBy && !this.people.has(k.petBy)) { k.petBy = null; k.until = now + rand(2000, 5000); }
+      if (!k.path.length && now > k.until && !k.petBy) {
         const { W, D, grid } = this.plan;
         let tx, ty, tries = 0;
         do { tx = rand(0.6, W - 0.6); ty = rand(1, D - 0.6); tries++; } while (grid.blocked(tx, ty) && tries < 30);
@@ -1895,32 +1934,81 @@
       }
     }
 
-    drawCat() {
-      const k = this.cat;
+    drawCat(k = this.cat) {
       const c = this.ctx;
       const p = this.iso(k.x, k.y, 0);
       const t = this.t / 1000;
       const walking = k.path.length > 0;
       c.save();
       c.translate(p.x, p.y);
-      c.scale(k.face, 1);
+      const CS = FLOATWIN ? 1.5 : 1; // keep cats in proportion with the bigger floating-window characters
+      c.scale(k.face * CS, CS);
       c.fillStyle = this.pal.shadow;
       c.beginPath(); c.ellipse(0, 0, 8, 3, 0, 0, Math.PI * 2); c.fill();
       const col = '#e09a4a';
-      c.fillStyle = col;
+      c.fillStyle = k.coat === 'calico' ? '#f3ece2' : col;
       if (walking) {
         const s = Math.sin(t * 14) * 1.5;
         c.fillRect(-5, -4, 2, 4 + s); c.fillRect(3, -4, 2, 4 - s);
       }
-      c.beginPath(); c.ellipse(0, walking ? -6 : -4, 7, walking ? 4 : 5, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(6, walking ? -10 : -9, 3.6, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.moveTo(4, -12); c.lineTo(5, -16); c.lineTo(7, -12.5); c.fill();
-      c.beginPath(); c.moveTo(7, -12.5); c.lineTo(9, -15.5); c.lineTo(9.5, -11); c.fill();
-      c.strokeStyle = col; c.lineWidth = 2; c.lineCap = 'round';
-      c.beginPath(); c.moveTo(-6, -6); c.quadraticCurveTo(-12, -8 + Math.sin(t * 3) * 3, -10, -14); c.stroke();
+      const calico = k.coat === 'calico';
+      const by = walking ? -6 : -4, hy = walking ? -10 : -9;
+      // Being petted: the cat leans into it and its tail sways happily.
+      const purr = k.petBy && !walking ? Math.sin(t * 6) * 0.6 : 0;
+      const body = () => { c.beginPath(); c.ellipse(0, by + purr * 0.3, 7, walking ? 4 : 5, 0, 0, Math.PI * 2); };
+      const head = () => { c.beginPath(); c.arc(6, hy + purr * 0.3, 3.6, 0, Math.PI * 2); };
+      const ears = () => {
+        c.beginPath(); c.moveTo(4, hy - 3); c.lineTo(5, hy - 7); c.lineTo(7, hy - 3.5); c.fill();
+        c.beginPath(); c.moveTo(7, hy - 3.5); c.lineTo(9, hy - 6.5); c.lineTo(9.5, hy - 2); c.fill();
+      };
+      if (calico) {
+        // White coat with ginger and black patches, outlined so it shows on light floors.
+        const ink = '#6b4a3a';
+        c.fillStyle = '#fffaf2';
+        body(); c.fill(); c.strokeStyle = ink; c.lineWidth = 0.8; c.stroke();
+        c.save(); body(); c.clip();
+        c.fillStyle = '#e8963f'; c.beginPath(); c.ellipse(-3, by - 3, 4, 3.2, 0.3, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#3a302a'; c.beginPath(); c.ellipse(3, by - 3.5, 3, 2.4, -0.2, 0, Math.PI * 2); c.fill();
+        c.restore();
+        c.fillStyle = '#fffaf2'; head(); c.fill(); c.stroke();
+        c.save(); head(); c.clip();
+        c.fillStyle = '#3a302a'; c.beginPath(); c.arc(4, hy - 2, 2.4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#e8963f'; c.beginPath(); c.arc(8.5, hy - 2, 2.2, 0, Math.PI * 2); c.fill();
+        c.restore();
+        c.fillStyle = '#3a302a'; c.beginPath(); c.moveTo(4, hy - 3); c.lineTo(5, hy - 7); c.lineTo(7, hy - 3.5); c.fill();
+        c.fillStyle = '#e8963f'; c.beginPath(); c.moveTo(7, hy - 3.5); c.lineTo(9, hy - 6.5); c.lineTo(9.5, hy - 2); c.fill();
+        c.strokeStyle = '#e8963f';
+      } else {
+        body(); c.fill();
+        head(); c.fill();
+        ears();
+        c.strokeStyle = col;
+      }
+      c.lineWidth = 2; c.lineCap = 'round';
+      const sway = k.petBy ? Math.sin(t * 8) * 4 : Math.sin(t * 3) * 3;
+      c.beginPath(); c.moveTo(-6, -6); c.quadraticCurveTo(-12, -8 + sway, -10, -14); c.stroke();
       c.fillStyle = '#2a2018';
-      c.fillRect(7, -10.5, 1.2, walking ? 1.2 : 0.6);
+      if (k.petBy && !walking) {
+        // Happy closed eyes: ^
+        c.lineWidth = 0.8; c.strokeStyle = '#2a2018';
+        c.beginPath(); c.moveTo(6.5, hy - 0.6); c.lineTo(7.4, hy - 1.6); c.lineTo(8.3, hy - 0.6); c.stroke();
+      } else {
+        c.fillRect(7, hy - 1.5, 1.2, walking ? 1.2 : 0.6);
+      }
       c.restore();
+      // Hearts float up while someone pets it.
+      const petter = k.petBy && this.people.get(k.petBy);
+      if (petter && !petter.path.length && !walking) {
+        c.save();
+        c.textAlign = 'center';
+        c.font = '9px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+        for (let i = 0; i < 2; i++) {
+          const f = (t * 0.7 + i / 2) % 1;
+          c.globalAlpha = 1 - f;
+          c.fillText('💗', p.x + (i ? 4 : -3) + Math.sin(t * 3 + i) * 2, p.y - (FLOATWIN ? 24 : 16) - f * 14);
+        }
+        c.restore();
+      }
     }
 
     pingPongBall() {
@@ -1978,7 +2066,7 @@
           this.people.delete(k);
         }
       }
-      this.moveCat(dt, wall);
+      for (const k of this.cats) this.moveCat(dt, wall, k);
     }
 
     draw() {
@@ -2002,7 +2090,7 @@
         items.push({ depth: dk.seat.x + dk.seat.y - 0.06, draw: () => this.chair(dk, p) });
       }
       for (const p of this.people.values()) items.push({ depth: p.x + p.y + 0.01, person: p });
-      items.push({ depth: this.cat.x + this.cat.y, draw: () => this.drawCat() });
+      for (const k of this.cats) items.push({ depth: k.x + k.y, draw: () => this.drawCat(k) });
       items.sort((a, b) => a.depth - b.depth);
 
       this.hit = [];
