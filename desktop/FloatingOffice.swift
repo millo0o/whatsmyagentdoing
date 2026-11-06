@@ -141,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   var web: DragWebView!
   var status: NSStatusItem!
   var server: Process?
+  var clickThrough = false
 
   func applicationDidFinishLaunching(_ note: Notification) {
     startServer()
@@ -230,7 +231,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     m.addItem(withTitle: "보통", action: #selector(medium), keyEquivalent: "")
     m.addItem(withTitle: "크게", action: #selector(large), keyEquivalent: "")
     m.addItem(.separator())
-    m.addItem(withTitle: "클릭 통과 (마우스가 뒤로 지나감)", action: #selector(toggleClickThrough), keyEquivalent: "").state = panel.ignoresMouseEvents ? .on : .off
+    m.addItem(withTitle: "클릭 통과 (⌥ 누른 채로 클릭하면 잠깐 해제)", action: #selector(toggleClickThrough), keyEquivalent: "").state = clickThrough ? .on : .off
     m.addItem(withTitle: "새로고침", action: #selector(reload), keyEquivalent: "")
     m.addItem(withTitle: "브라우저에서 열기", action: #selector(openBrowser), keyEquivalent: "")
     m.addItem(.separator())
@@ -242,6 +243,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   func buildMenu() {
     status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     status.button?.title = "🏢"
+    watchOptionKey()
     status.menu = makeMenu()
     status.menu?.delegate = self
   }
@@ -258,7 +260,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   @objc func large() { resize(1300, 980) }
   @objc func roomMode() { defaults.set(false, forKey: "bare"); reload() }
   @objc func bareMode() { defaults.set(true, forKey: "bare"); reload() }
-  @objc func toggleClickThrough() { panel.ignoresMouseEvents.toggle() }
+  @objc func toggleClickThrough() {
+    clickThrough.toggle()
+    panel.ignoresMouseEvents = clickThrough
+    status.button?.title = clickThrough ? "🏢👻" : "🏢"
+  }
+  // While click-through is on, holding Option over the window makes it clickable
+  // again, so its right-click menu can turn click-through off.
+  func watchOptionKey() {
+    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+      guard let self = self, self.clickThrough else { return }
+      let wantClicks = NSEvent.modifierFlags.contains(.option) && self.panel.frame.contains(NSEvent.mouseLocation)
+      if self.panel.ignoresMouseEvents == wantClicks { self.panel.ignoresMouseEvents = !wantClicks }
+    }
+  }
   @objc func reload() { web.load(URLRequest(url: officeURL())) }
   @objc func openBrowser() { NSWorkspace.shared.open(URL(string: "http://localhost:4545")!) }
   @objc func quit() { NSApp.terminate(nil) }

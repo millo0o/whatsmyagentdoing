@@ -383,11 +383,16 @@
     position: fixed; z-index: 30; top: 8px; left: 8px; right: 8px; margin: 0; padding: 6px 10px;
     background: rgba(255, 252, 246, .94); border: 1.5px solid #c9a891; border-radius: 12px; box-shadow: 0 4px 14px #6b4a3a22;
   }
-  /* Floating window: no title, toolbar hugs the right edge, and keep the button
+  /* Floating window: title shrinks first, and the buttons keep their
      labels until the window is really narrow. */
-  body.float header h1, body.float .summary { display: none !important; }
-  body.float header { left: auto; max-width: calc(100vw - 16px); }
+  body.float .summary { display: none !important; }
+  body.float header { left: 8px; }
+  html body.float header { flex-wrap: nowrap; gap: 8px; }
+  html body.float .controls { flex: none; flex-wrap: nowrap; margin-left: auto; padding-top: 0; gap: 6px; }
+  body.float header h1 { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 559px) { body.float header h1 { display: none; } body.float header { left: auto; } }
   @media (min-width: 560px) {
+    html body.float header h1 { display: block; }
     html body.float .today-tokens, html body.float #langName,
     html body.float #todayMenu > summary [data-t], html body.float #settingsMenu > summary [data-t] { display: revert; }
   }
