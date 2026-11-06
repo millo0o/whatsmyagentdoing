@@ -136,6 +136,9 @@
   // in screen pixels so they stay readable at any window size.
   const CHAR_BOOST = FLOATWIN ? 1.55 : 1;
   const CHARS = []; // [{ front, left, right, back, walk: [4] }]
+  // Optional "workaholic" in chars.json: index of the character (counting rows
+  // across all sheets, from 0) that takes the working sessions and works the most.
+  let WORKAHOLIC = -1;
   // Cut a whole sheet into characters by connected shapes (not a fixed grid),
   // so a neighbour's feet never end up in a cell and nothing gets clipped.
   function cutSheet(img, rows) {
@@ -294,6 +297,7 @@
       if (!r || !r.ok) continue;
       const cfg = await r.json();
       if (cfg.enabled === false) return [];
+      if (Number.isInteger(cfg.workaholic)) WORKAHOLIC = cfg.workaholic;
       return (cfg.sheets || []).map((s) => ({ dir: base + s.dir, walk: base + s.walk, rows: s.rows || 1 }));
     }
     return [];
@@ -813,8 +817,23 @@
       if (CHARS.length) {
         const real = [...shown].map((k) => this.people.get(k));
         const taken = new Set(real.map((p) => p.charIdx).filter((i) => i != null));
+        const star = WORKAHOLIC >= 0 && WORKAHOLIC < CHARS.length ? WORKAHOLIC : -1;
+        // The workaholic gets a working session whenever one exists.
+        if (star >= 0 && Date.now() > (this.starSwap || 0)) {
+          const holder = real.find((p) => p.charIdx === star);
+          if (!holder || !WORKING.has(holder.s.status)) {
+            const w = real.find((p) => p !== holder && WORKING.has(p.s.status));
+            if (w) {
+              if (holder) holder.charIdx = w.charIdx ?? null;
+              else if (w.charIdx != null) taken.delete(w.charIdx);
+              w.charIdx = star; taken.add(star);
+              this.starSwap = Date.now() + 15000;
+            }
+          }
+        }
         for (const p of real) {
           if (p.charIdx != null) continue;
+          if (star >= 0 && !taken.has(star) && WORKING.has(p.s.status)) { p.charIdx = star; taken.add(star); continue; }
           let i = p.h % CHARS.length;
           for (let k = 0; k < CHARS.length && taken.has(i); k++) i = (i + 1) % CHARS.length;
           p.charIdx = i;
@@ -894,10 +913,15 @@
       }
       // Keep a desk free for real sessions, and at most ~a third of the idle ones at work.
       const free = desks.filter((d) => !busy.has(d) && !d.napper && d.pose !== 'stand');
-      let room = Math.min(free.length - 1, Math.ceil(npcs.length / 3) - npcs.filter((p) => p.mode === 'work').length);
+      let room = Math.min(free.length - 1, Math.ceil(npcs.length / 3) - npcs.filter((p) => p.mode === 'work' && p.charIdx !== WORKAHOLIC).length);
+      // The workaholic goes first and doesn't count against the limit.
+      const star = npcs.findIndex((p) => p.charIdx === WORKAHOLIC);
+      if (star > 0) npcs.unshift(npcs.splice(star, 1)[0]);
       for (const p of npcs) {
+        const isStar = p.charIdx === WORKAHOLIC;
+        if (isStar && room <= 0 && free.length > 1) room = 1;
         if (room <= 0) break;
-        if (p.mode !== 'wander' || p.path.length || now < (p.nextShift ??= now + rand(3, 25) * 1000)) continue;
+        if (p.mode !== 'wander' || p.path.length || now < (p.nextShift ??= now + (isStar ? 1 : rand(3, 25)) * 1000)) continue;
         const d = free.splice(Math.floor(Math.random() * free.length), 1)[0];
         if (!d) break;
         this.release(p);
@@ -906,7 +930,7 @@
         p.shift = true;
         p.desk = d;
         d.npcWorker = p.key;
-        p.shiftEnd = now + rand(30, 90) * 1000;
+        p.shiftEnd = now + (isStar ? rand(120, 240) : rand(30, 90)) * 1000;
         this.goTo(p, d.seat);
         room--;
       }
@@ -917,7 +941,7 @@
       p.mode = 'wander';
       p.shift = false;
       p.desk = null; p.poi = null; p.until = 0;
-      p.nextShift = now + rand(20, 60) * 1000;
+      p.nextShift = now + (p.charIdx === WORKAHOLIC ? rand(5, 15) : rand(20, 60)) * 1000;
     }
 
     wander(p, now) {
