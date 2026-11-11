@@ -6,3 +6,6 @@ packs/
 
 # Your own character sheets (not shared; see CHARACTERS.md)
 assets/chars/
+
+# Sessions taken out of the office
+.hidden.json

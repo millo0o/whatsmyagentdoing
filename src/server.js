@@ -112,9 +112,20 @@ function summary(sessions, now) {
   return out;
 }
 
+// Sessions the user took out of the office ("사무실에서 빼기"), e.g. chats
+// deleted in an app that leaves no trace on disk. key -> last activity when
+// hidden; a chat that gets new activity comes back.
+const HIDDEN_FILE = path.join(__dirname, '..', '.hidden.json');
+let hiddenKeys = {};
+try { hiddenKeys = JSON.parse(fs.readFileSync(HIDDEN_FILE, 'utf8')) || {}; } catch { /* none yet */ }
+const isHidden = (s) => {
+  const at = hiddenKeys[`${s.agent}:${s.id}`];
+  return at != null && (s.lastEventAt || s.mtime || 0) <= at;
+};
+
 function snapshot(watcher, opts) {
   const now = Date.now();
-  const raw = watcher.sessions();
+  const raw = watcher.sessions().filter((s) => !isHidden(s));
   const sessions = raw.map((s) => view(s, now, opts));
   sessions.sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
   return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: summary(sessions, now) };
@@ -211,6 +222,17 @@ function createServer(watcher, opts, { onShutdown, onRestart } = {}) {
       else cp.spawn(electron, [winDir], { stdio: 'ignore', detached: true, windowsHide: false }).unref();
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
+    } else if (url.pathname === '/api/hide' && req.method === 'POST') {
+      // Same custom-header guard as shutdown, so other sites can't trigger it.
+      if (req.headers['x-whatsmyagentdoing'] !== 'hide') { res.writeHead(403).end(); return; }
+      const key = String(url.searchParams.get('key') || '').slice(0, 300);
+      const s = watcher.sessions().find((x) => `${x.agent}:${x.id}` === key);
+      if (!s) { res.writeHead(404).end(); return; }
+      hiddenKeys[key] = s.lastEventAt || s.mtime || Date.now();
+      try { fs.writeFileSync(HIDDEN_FILE, JSON.stringify(hiddenKeys)); } catch (e) { console.error('hide:', e.message); }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      push(true);
     } else if (url.pathname === '/api/shutdown' && req.method === 'POST') {
       // Only our CLI sends this header; a web page can't add a custom header
       // to a cross-site request without a CORS preflight, which we never allow.

@@ -1373,7 +1373,7 @@ function renderDetail(scrollDown) {
       <dt></dt><dd data-time="${esc(s.key)}"></dd>
     </dl>
     ${contextBar(s.context)}
-    ${resume ? `<div class="dactions"><button class="copy" data-copy="${esc(resume)}">${L.copy}</button></div>` : ''}
+    <div class="dactions">${resume ? `<button class="copy" data-copy="${esc(resume)}">${L.copy}</button>` : ''}<button class="copy hide-s" data-hide="${esc(s.key)}" title="지운 대화라면 사무실에서 빼요. 다시 대화하면 돌아와요.">사무실에서 빼기</button></div>
     <div class="side-sec">${esc(L.recent)}</div>
     ${msgs}`;
   // The turn timer ticks on its own (tickTimes), so the panel only redraws when something changed.
@@ -1401,6 +1401,14 @@ async function loadConvo(s) {
 }
 
 document.getElementById('sideHide').addEventListener('click', () => setSide(false));
+// Take a session out of the office (a chat deleted in an app that leaves no trace).
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest?.('[data-hide]'); if (!b) return;
+  e.stopPropagation();
+  b.disabled = true;
+  const r = await fetch(`/api/hide?key=${encodeURIComponent(b.dataset.hide)}`, { method: 'POST', headers: { 'x-whatsmyagentdoing': 'hide' } }).catch(() => null);
+  if (r && r.ok) closeDetail(); else b.disabled = false;
+});
 // ...and so does clicking anywhere else outside it (the office canvas handles its own clicks).
 document.addEventListener('click', (e) => {
   if (!state.full || !state.side || !e.target.closest) return;
