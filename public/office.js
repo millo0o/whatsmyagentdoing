@@ -1015,7 +1015,7 @@
         // a little heart sticker on the back, and the status light
         const g = this.iso(mx + 0.28, my + 0.08, mz + 0.4);
         const c = this.ctx;
-        c.fillStyle = '#ff7f9f'; c.beginPath(); c.arc(g.x - 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.arc(g.x + 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.moveTo(g.x - 3.2, g.y - 0.5); c.lineTo(g.x, g.y + 3); c.lineTo(g.x + 3.2, g.y - 0.5); c.fill();
+        c.fillStyle = '#e38f80'; c.beginPath(); c.arc(g.x - 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.arc(g.x + 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.moveTo(g.x - 3.2, g.y - 0.5); c.lineTo(g.x, g.y + 3); c.lineTo(g.x + 3.2, g.y - 0.5); c.fill();
         if (worker) {
           const s = this.iso(mx + 0.28, my + 0.08, mz + 0.55);
           c.fillStyle = STATUS_COLOR[worker.s.status] || '#888';
@@ -1032,7 +1032,7 @@
         this.cyl(lx, ly, zt, 0.025, 0.2, '#fff1d6', '#fff1d6');
         const q = this.iso(lx, ly, zt + 0.2), c = this.ctx;
         c.fillStyle = 'rgba(255,236,160,.35)'; c.beginPath(); c.arc(q.x, q.y + 2, 9, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#ffb3c6'; c.strokeStyle = pal.ink; c.lineWidth = 0.8; c.beginPath(); c.ellipse(q.x, q.y, 6, 4.5, 0, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#e9b8aa'; c.strokeStyle = pal.ink; c.lineWidth = 0.8; c.beginPath(); c.ellipse(q.x, q.y, 6, 4.5, 0, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
         c.fillStyle = '#fff'; c.beginPath(); c.arc(q.x - 2, q.y - 2, 1, 0, Math.PI * 2); c.arc(q.x + 2, q.y - 3, 0.9, 0, Math.PI * 2); c.fill();
       } else if (h % 3 === 1) {
         this.cyl(x + 1.16, y + 0.35, zt, 0.06, 0.12, '#7a4e33', '#fffdf8');
@@ -1040,9 +1040,9 @@
       if (h % 5 === 1) {
         this.cyl(x + 0.2, y + 0.3, zt, 0.06, 0.09, this.shade(col, -25), this.shade(col, -25));
         const q = this.iso(x + 0.2, y + 0.3, zt + 0.09), c = this.ctx;
-        c.fillStyle = '#8fd19a'; c.beginPath(); c.ellipse(q.x - 2, q.y - 4, 2.5, 5, -0.4, 0, Math.PI * 2); c.ellipse(q.x + 2, q.y - 4, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#9cbc95'; c.beginPath(); c.ellipse(q.x - 2, q.y - 4, 2.5, 5, -0.4, 0, Math.PI * 2); c.ellipse(q.x + 2, q.y - 4, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
       }
-      if (h % 4 === 2) this.box(x + 0.12, y + 0.45, zt, 0.22, 0.15, 0.05, '#ffe08a', '#f2cf6e', '#e6c15c');
+      if (h % 4 === 2) this.box(x + 0.12, y + 0.45, zt, 0.22, 0.15, 0.05, '#f3e3b0', '#e7d39c', '#dbc68a');
     }
 
     toyChair(dk, p) {
@@ -2465,16 +2465,19 @@
     }
 
     coffeeMachine(x, y) {
-      this.box(x, y, 0.9, 0.5, 0.45, 0.6, '#555b63', '#3a3f45', '#2e3237');
-      this.box(x + 0.15, y + 0.42, 1.0, 0.2, 0.05, 0.15, '#222', '#111', '#111');
+      const PA = this.plan && this.plan.paper;
+      if (PA) this.box(x, y, 0.9, 0.5, 0.45, 0.6, '#b9aca2', '#a3958a', '#8c7a6e');
+      else this.box(x, y, 0.9, 0.5, 0.45, 0.6, '#555b63', '#3a3f45', '#2e3237');
+      this.box(x + 0.15, y + 0.42, 1.0, 0.2, 0.05, 0.15, PA ? '#70584a' : '#222', PA ? '#5e4a3e' : '#111', PA ? '#5e4a3e' : '#111');
       const p = this.iso(x + 0.4, y + 0.45, 1.35);
-      this.ctx.fillStyle = Math.sin(this.t / 400) > 0 ? '#ff6b4a' : '#7a3a2a';
+      this.ctx.fillStyle = Math.sin(this.t / 400) > 0 ? (PA ? '#e38f80' : '#ff6b4a') : (PA ? '#b9aca2' : '#7a3a2a');
       this.ctx.fillRect(p.x, p.y, 2.5, 2.5);
       this.box(x + 0.6, y + 0.1, 0.9, 0.14, 0.14, 0.14, '#fff', '#ddd', '#ccc');
     }
 
     sink(x, y) {
-      this.box(x, y + 0.05, 0.9, 0.55, 0.4, 0.02, '#9aa3ad', '#7d858e', '#6c737b');
+      const PA = this.plan && this.plan.paper;
+      this.box(x, y + 0.05, 0.9, 0.55, 0.4, 0.02, PA ? '#d8cfc4' : '#9aa3ad', PA ? '#c9bcb0' : '#7d858e', PA ? '#b9aca2' : '#6c737b');
       this.box(x + 0.22, y + 0.02, 0.92, 0.06, 0.06, 0.3, this.pal.metal, this.pal.metal, '#888');
       this.box(x + 0.22, y + 0.02, 1.2, 0.06, 0.2, 0.04, this.pal.metal, this.pal.metal, '#888');
     }
@@ -2491,10 +2494,12 @@
     }
 
     waterCooler(x, y) {
-      this.box(x, y, 0, 0.42, 0.42, 0.95, '#e8ecef', '#cfd5db', '#bcc3ca');
+      const PA = this.plan && this.plan.paper;
+      if (PA) this.box(x, y, 0, 0.42, 0.42, 0.95, '#faf6ed', '#e8d8c3', '#d8c4ab');
+      else this.box(x, y, 0, 0.42, 0.42, 0.95, '#e8ecef', '#cfd5db', '#bcc3ca');
       const c = this.ctx;
       const p = this.iso(x + 0.21, y + 0.21, 0.95);
-      c.fillStyle = 'rgba(120,180,240,.6)';
+      c.fillStyle = PA ? 'rgba(184,205,222,.65)' : 'rgba(120,180,240,.6)';
       c.beginPath(); c.ellipse(p.x, p.y - 9, 8, 11, 0, 0, Math.PI * 2); c.fill();
       c.fillStyle = 'rgba(255,255,255,.5)';
       c.fillRect(p.x - 4, p.y - 16, 2, 10);
@@ -2502,7 +2507,7 @@
       c.fillStyle = 'rgba(255,255,255,.85)';
       c.beginPath(); c.arc(p.x + 2, p.y - 2 - k * 16, 1.2, 0, Math.PI * 2); c.fill();
       const tap = this.iso(x + 0.21, y + 0.42, 0.65);
-      c.fillStyle = '#3b8ee0'; c.fillRect(tap.x - 1.5, tap.y, 3, 3);
+      c.fillStyle = PA ? '#e38f80' : '#3b8ee0'; c.fillRect(tap.x - 1.5, tap.y, 3, 3);
     }
 
     couch(x, y) {
@@ -2511,13 +2516,14 @@
       this.box(x, y, 0, 2.8, 0.8, 0.32, pal.couch, pal.couchD, this.shade(pal.couchD, -12));
       this.box(x - 0.15, y - 0.05, 0, 0.18, 0.85, 0.52, this.shade(pal.couch, 6), pal.couchD, this.shade(pal.couchD, -12));
       this.box(x + 2.8, y - 0.05, 0, 0.18, 0.85, 0.52, this.shade(pal.couch, 6), pal.couchD, this.shade(pal.couchD, -12));
-      this.box(x + 2.15, y + 0.12, 0.32, 0.35, 0.16, 0.28, '#e9c46a', '#d4ae52', '#c19c43');
+      this.box(x + 2.15, y + 0.12, 0.32, 0.35, 0.16, 0.28, '#ecc768', '#ddb658', '#cba549');
     }
 
     coffeeTable(x, y) {
       const pal = this.pal;
       this.box(x, y, 0, 1.6, 0.7, 0.3, this.shade(pal.deskTop, -10), pal.deskL, pal.deskR);
-      this.box(x + 0.2, y + 0.15, 0.3, 0.35, 0.25, 0.06, '#c96442', '#a85336', '#8f462e');
+      if (this.plan && this.plan.paper) this.box(x + 0.2, y + 0.15, 0.3, 0.35, 0.25, 0.06, '#e38f80', '#d47c6e', '#c46e60');
+      else this.box(x + 0.2, y + 0.15, 0.3, 0.35, 0.25, 0.06, '#c96442', '#a85336', '#8f462e');
       this.box(x + 1.1, y + 0.3, 0.3, 0.12, 0.12, 0.12, '#fff', '#ddd', '#ccc');
     }
 
@@ -2559,11 +2565,11 @@
       this.poly([P(x + 0.1, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.45), P(x + 0.1, y + 0.7, 1.45)], (paper ? `hsl(${hue},45%,78%)` : `hsl(${hue},70%,55%)`));
       const blip = this.iso(x + 0.25 + 0.2 * Math.sin(this.t / 300), y + 0.7, 1.2);
       this.ctx.fillStyle = '#fff'; this.ctx.fillRect(blip.x, blip.y, 3, 3);
-      this.poly([P(x, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.72), P(x, y + 0.7, 1.72)], '#ffcf4a');
+      this.poly([P(x, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.72), P(x, y + 0.7, 1.72)], paper ? '#ecc768' : '#ffcf4a');
       if (paper) this.box(x, y + 0.7, 0.8, 0.7, 0.2, 0.08, '#faf6ed', '#e8d8c3', '#d8c4ab');
       else this.box(x, y + 0.7, 0.8, 0.7, 0.2, 0.08, '#4a3a8a', '#3a2a6a', '#2b1f52');
       const j = this.iso(x + 0.25, y + 0.8, 0.88);
-      this.ctx.fillStyle = '#e04a4a'; this.ctx.beginPath(); this.ctx.arc(j.x, j.y - 3, 2.5, 0, Math.PI * 2); this.ctx.fill();
+      this.ctx.fillStyle = paper ? '#e38f80' : '#e04a4a'; this.ctx.beginPath(); this.ctx.arc(j.x, j.y - 3, 2.5, 0, Math.PI * 2); this.ctx.fill();
     }
 
     floorLamp(x, y) {
@@ -2635,12 +2641,13 @@
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
       const H = 1.95, x0 = x - 0.12, x1 = x + W + 0.12, y0 = y - 0.12, y1 = y + D + 0.12;
-      const RED = '#e8413a', YEL = '#ffd23f';
+      const PA = this.plan && this.plan.paper;
+      const RED = PA ? '#e38f80' : '#e8413a', YEL = PA ? '#faf6ed' : '#ffd23f';
       const ink = this.pal.ink || '#5b4032';
       const raw = (pts, fill) => { c.beginPath(); pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); c.closePath(); c.fillStyle = fill; c.fill(); };
       // poles at the cart corners
       for (const [px, py] of [[x + 0.03, y + 0.03], [x + W - 0.06, y + 0.03], [x + 0.03, y + D - 0.06], [x + W - 0.06, y + D - 0.06]]) {
-        this.box(px, py, 0.8, 0.03, 0.03, H - 0.8, '#c9c9c9', '#b0b0b0', '#999');
+        this.box(px, py, 0.8, 0.03, 0.03, H - 0.8, PA ? '#d8c4ab' : '#c9c9c9', PA ? '#c9b396' : '#b0b0b0', PA ? '#b8a284' : '#999');
       }
       // warm bulb under the canopy
       const bulb = P(x + W * 0.35, y + D / 2, H - 0.25);
@@ -3023,19 +3030,22 @@
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
       const W = 1.5, D = 0.75;
+      const PA = this.plan && this.plan.paper;
+      const K = PA ? { body: ['#f0d3a8', '#e3bd8a', '#d4a974'], wheel: '#9cbc95', rim: 'rgba(112,88,74,.8)', hub: '#faf6ed', caster: '#8c7a6e', mold: ['#8c7a6e', '#7a6a5f', '#6c5d53'], sign: '#f3e3b0', signLine: '#9cbc95', t1: '#d47c6e', t2: '#70584a' }
+        : { body: ['#f6b26b', '#e8873a', '#d0712a'], wheel: '#2f6fd6', rim: '#1d4fa0', hub: '#f2f2f2', caster: '#444', mold: ['#3d3532', '#2c2522', '#241e1b'], sign: '#ffe14d', signLine: '#2f6fd6', t1: '#e8413a', t2: '#2f6fd6' };
       // body
-      this.box(x, y, 0.22, W, D, 0.58, '#f6b26b', '#e8873a', '#d0712a');
+      this.box(x, y, 0.22, W, D, 0.58, K.body[0], K.body[1], K.body[2]);
       // big blue wheels on the right side, small caster at the front
       for (const wy of [y + 0.2, y + D - 0.2]) {
         const w = P(x + W, wy, 0.2);
-        c.fillStyle = '#2f6fd6'; c.beginPath(); c.ellipse(w.x, w.y, 6.5, 8, 0, 0, Math.PI * 2); c.fill();
-        c.strokeStyle = '#1d4fa0'; c.lineWidth = 1.2; c.stroke();
-        c.fillStyle = '#f2f2f2'; c.beginPath(); c.ellipse(w.x, w.y, 2.2, 2.8, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = K.wheel; c.beginPath(); c.ellipse(w.x, w.y, 6.5, 8, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = K.rim; c.lineWidth = 1.2; c.stroke();
+        c.fillStyle = K.hub; c.beginPath(); c.ellipse(w.x, w.y, 2.2, 2.8, 0, 0, Math.PI * 2); c.fill();
       }
       const cw = P(x + 0.2, y + D, 0.07);
-      c.fillStyle = '#444'; c.beginPath(); c.arc(cw.x, cw.y, 2.5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = K.caster; c.beginPath(); c.arc(cw.x, cw.y, 2.5, 0, Math.PI * 2); c.fill();
       // iron mold on the right half
-      this.box(x + 0.8, y + 0.1, 0.8, 0.6, D - 0.2, 0.06, '#3d3532', '#2c2522', '#241e1b');
+      this.box(x + 0.8, y + 0.1, 0.8, 0.6, D - 0.2, 0.06, K.mold[0], K.mold[1], K.mold[2]);
       for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
         const q = P(x + 0.95 + i * 0.3, y + 0.24 + j * 0.27, 0.87);
         const k = ((t * 0.12 + i * 0.29 + j * 0.47) % 1);
@@ -3053,13 +3063,13 @@
       c.globalAlpha = 1;
       // signboard on the front face: yellow panel with a fish and the price
       const s0 = P(x + 0.18, y + D, 0.72), s1 = P(x + 0.95, y + D, 0.72), s2 = P(x + 0.95, y + D, 0.32), s3 = P(x + 0.18, y + D, 0.32);
-      c.fillStyle = '#ffe14d'; c.beginPath(); c.moveTo(s0.x, s0.y); c.lineTo(s1.x, s1.y); c.lineTo(s2.x, s2.y); c.lineTo(s3.x, s3.y); c.closePath(); c.fill();
-      c.strokeStyle = '#2f6fd6'; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = K.sign; c.beginPath(); c.moveTo(s0.x, s0.y); c.lineTo(s1.x, s1.y); c.lineTo(s2.x, s2.y); c.lineTo(s3.x, s3.y); c.closePath(); c.fill();
+      c.strokeStyle = K.signLine; c.lineWidth = 1.2; c.stroke();
       const mid = { x: (s0.x + s2.x) / 2, y: (s0.y + s2.y) / 2 };
       this.fishBread(mid.x - 6, mid.y - 1, '#e9a94b', 1.1);
-      c.fillStyle = '#e8413a'; c.font = '800 6px ui-sans-serif, system-ui, -apple-system, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = K.t1; c.font = '800 6px ui-sans-serif, system-ui, -apple-system, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText('붕어빵', mid.x + 7, mid.y - 2.5);
-      c.fillStyle = '#2f6fd6'; c.fillText('3개 2천', mid.x + 7, mid.y + 3.5);
+      c.fillStyle = K.t2; c.fillText('3개 2천', mid.x + 7, mid.y + 3.5);
       // steam
       for (let i = 0; i < 3; i++) {
         const k = (t * 0.45 + i / 3) % 1;
@@ -3146,7 +3156,8 @@
     screen(x, y, z, w, h, p) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const st = p ? p.s.status : 'off';
-      const base = { thinking: '#3a3160', tool: '#14324f', typing: '#123d2e', waiting: '#4d3510', error: '#4a1612' }[st] || this.pal.screenOff;
+      const PA = this.plan && this.plan.paper;
+      const base = (PA ? { thinking: '#e4dcec', tool: '#d6e2ec', typing: '#dde9d6', waiting: '#f3e6c0', error: '#f2cdc6' } : { thinking: '#3a3160', tool: '#14324f', typing: '#123d2e', waiting: '#4d3510', error: '#4a1612' })[st] || this.pal.screenOff;
       const corners = [P(x, y, z), P(x + w, y, z), P(x + w, y, z + h), P(x, y, z + h)];
       this.poly(corners, base);
       if (!p) return;
@@ -3164,7 +3175,7 @@
           const zz = z + h - 0.05 - ((i + scroll) * h) / 5;
           const len = 0.12 + ((p.h >> ((i + 8) & 15)) % 7) / 20;
           const a = P(x + 0.05, y, zz), b = P(x + 0.05 + Math.min(len, w - 0.1), y, zz);
-          c.strokeStyle = i % 3 === 0 ? col : 'rgba(255,255,255,.55)';
+          c.strokeStyle = i % 3 === 0 ? col : PA ? 'rgba(112,88,74,.3)' : 'rgba(255,255,255,.55)';
           c.lineWidth = 1.5;
           c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
         }
@@ -3516,7 +3527,9 @@
 
       let top = y;
       if (p.mode === 'work' && !p.path.length) {
-        const col = STATUS_COLOR[st] || '#888';
+        // The paper office keeps working states soft; only waiting/error stay loud.
+        const PAPER_STATUS = { thinking: '#9a8fc0', tool: '#7f9fb8', typing: '#86a97f', waiting: STATUS_COLOR.waiting, error: STATUS_COLOR.error };
+        const col = (this.plan.paper && PAPER_STATUS[st]) || STATUS_COLOR[st] || '#888';
         const ph = workPhase(s);
         if (ph && (st === 'thinking' || st === 'typing' || st === 'tool')) {
           // Phase label with animated dots, e.g. "💻 개발 중…"
