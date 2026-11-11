@@ -58,7 +58,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', cake: '🍰', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
+    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', cake: '🍰', review: '🔍', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
   };
 
   // What everyone is up to, shown as a little caption ("🎮 게임 중").
@@ -72,6 +72,7 @@
     couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
     beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
     window: WINTER ? [['❄️', '눈 구경 중'], ['⛰️', '경치 구경 중']] : [['⛰️', '경치 구경 중'], ['☁️', '구름 구경 중'], ['🌤️', '날씨 구경 중']],
+    review: [['🔍', '검토 중'], ['📝', '리뷰 쓰는 중'], ['✅', '결과 확인 중'], ['🖍️', '빨간펜 드는 중']],
     cake: [['🍰', '케이크 고르는 중'], ['🍓', '딸기 케이크 먹는 중'], ['🧁', '컵케이크 먹는 중']],
     weed: [['🌿', '풀 뽑는 중'], ['💰', '근로 중'], ['🌿', '제초 알바 중'], ['💦', '땀 흘리며 일하는 중']],
     pond: [['🐸', '개구리 구경 중'], ['🐟', '물고기 구경 중'], ['🪷', '연못 멍 중']],
@@ -365,17 +366,17 @@
       text: '#ecebe6', tagBg: 'rgba(20,20,19,.78)', bubble: '#f4f3ee', bubbleInk: '#1c1c1a',
       plant: '#4f8a52', pot: '#9a5b3c', shadow: 'rgba(0,0,0,.28)', book: ['#c96442', '#3b8ee0', '#5f9a4c', '#c9a24c', '#8b6be6'],
     } : {
-      dark: false, cute: true, ink: '#6b4a3a',
+      dark: false, cute: true, ink: 'rgba(112,88,74,.6)',
       wood1: '#fbe3cf', wood2: '#f7d8c2', woodLine: 'rgba(160,110,80,.10)',
       tileA: '#fff7ec', tileB: '#fde3e6', carpet: '#d8ecf7', carpetLine: 'rgba(120,160,190,.10)',
       wallL: '#fff3e4', wallR: '#fde6df', wallTop: '#fffaf3', trim: '#e9c9b4',
-      deskTop: '#f6d5a8', deskL: '#e8bf8c', deskR: '#dcae7a',
-      monitor: '#7a6a7e', screenOff: '#a99bb0', chair: '#f2b8c6',
-      rug: '#d6efd9', rugEdge: '#a8d3b0', couch: '#b9d4f4', couchD: '#9fbfe6',
+      deskTop: '#e8d8c3', deskL: '#d8c4ab', deskR: '#c9b396',
+      monitor: '#8c7a6e', screenOff: '#b9aca2', chair: '#e9b8aa',
+      rug: '#b8c7b0', rugEdge: '#9fb397', couch: '#e9b8aa', couchD: '#d9a596',
       counter: '#fffdf8', counterL: '#f1e2d2', counterR: '#e7d3c1', metal: '#d8d4e4',
       glass: 'rgba(190,225,245,.22)', glassEdge: 'rgba(140,180,210,.55)', mat: '#cdeccf',
       text: '#5b4032', tagBg: 'rgba(255,252,246,.94)', bubble: '#fffdf8', bubbleInk: '#5b4032',
-      plant: '#8fd19a', pot: '#f4a9a0', shadow: 'rgba(120,80,60,.14)', book: ['#f7a6b8', '#a7c8f2', '#b5e0b0', '#f8d98b', '#cdb6f0'],
+      plant: '#a9bda0', pot: '#e8d8c3', shadow: 'rgba(112,88,74,.16)', book: ['#e9b8aa', '#b8c7b0', '#d8bd98', '#d9cfe0', '#e7c66b'],
     };
   }
 
@@ -542,7 +543,7 @@
     // ------------------------------------------------------------ floor plan
 
     buildPlan(nWorking) {
-      if (this.pal.cute) return this.buildVillage(nWorking);
+      if (this.pal.cute) return this.buildPaper(nWorking);
       const pal = this.pal;
       const pods = Math.max(2, Math.ceil((nWorking + 2) / 4));
       const podCols = pods <= 4 ? 2 : 3;
@@ -1124,6 +1125,265 @@
       else { c.fillStyle = '#ffb3c6'; for (const [ox, oy] of [[-9, -8], [6, -13], [9, -4]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, 2, 0, Math.PI * 2); c.fill(); } }
     }
 
+    // ------------------------------------------------------------ paper office
+    // "Milk-tea paper" (cute palette): a small studio drawn in brown pen and pale
+    // watercolour on warm paper. Desks along the back, an empty aisle through
+    // the middle, a rest corner and a review table at the front, the big
+    // seasonal tree front and centre.
+    buildPaper(nWorking) {
+      // 2-person desk islands along the back (4 per row) + 4 focus desks.
+      const rows = Math.max(1, Math.ceil(Math.max(0, nWorking + 2 - 4) / 8));
+      const islands = rows * 4;
+      const workBottom = 1.4 + (rows - 1) * 3.3 + 2.6;
+      const A = workBottom + 1.7;            // the aisle ends, the front zones start
+      const W = 17.2, D = A + 4.6;
+      const grid = new Grid(W, D);
+      const items = [], pois = [], desks = [], props = [], washes = [];
+      const add = (depth, draw) => items.push({ depth, draw });
+      const solid = (x, y, w, d, pad) => grid.block(x, y, w, d, pad);
+      const poi = (x, y, act, face, opt = {}) => pois.push({ x, y, act, face, sit: 0, ...opt });
+      const TONE = ['#e8d8c3', '#b8c7b0', '#e9b8aa', '#d9cfe0'];
+
+      // ---- shared desks: islands of two, face to face
+      for (let i = 0; i < islands; i++) {
+        const r = Math.floor(i / 4), k = i % 4;
+        const x = 1.7 + k * 2.6, y = 1.4 + r * 3.3;
+        const col = TONE[(i + r) % TONE.length];
+        desks.push({ x, y, side: 'n', seat: { x: x + 0.7, y: y - 0.45 }, col });
+        desks.push({ x, y: y + 0.92, side: 's', seat: { x: x + 0.7, y: y + 0.92 + 1.25 }, col });
+        solid(x, y, 1.4, 1.72, 0.08);
+      }
+      washes.push({ x: 6.3, y: workBottom / 2 + 0.3, rx: 6.2, ry: workBottom / 2 + 0.5, col: 'rgba(184,199,176,.20)' });
+
+      // ---- focus desks: single desks with low partitions (back right)
+      const FX = 13.1;
+      for (const [fx, fy] of [[FX, 1.2], [FX + 2.0, 1.2], [FX, 3.4], [FX + 2.0, 3.4]]) {
+        desks.push({ x: fx, y: fy, side: 'n', seat: { x: fx + 0.7, y: fy - 0.45 }, col: '#e8d8c3', focus: true });
+        solid(fx, fy, 1.4, 0.8, 0.08);
+      }
+      const panel = '#b8c7b0';
+      add(FX + 1.7 + 2.3, () => this.box(FX - 0.1, 2.25, 0, 3.6, 0.08, 0.8, this.shade(panel, 18), panel, this.shade(panel, -12)));
+      add(FX + 1.75 + 2.5, () => this.box(FX + 1.6, 0.9, 0, 0.08, 3.6, 0.8, this.shade(panel, 18), panel, this.shade(panel, -12)));
+      solid(FX - 0.1, 2.2, 3.6, 0.15, 0.03);
+      solid(FX + 1.58, 0.9, 0.12, 3.6, 0.03);
+      washes.push({ x: FX + 1.7, y: 2.5, rx: 2.4, ry: 2.4, col: 'rgba(217,207,224,.22)' });
+
+      // ---- coffee nook on the back wall between the two
+      add(11.3 + 0.45, () => this.waterCooler(11.1, 0.22));
+      solid(11.05, 0.2, 0.5, 0.5);
+      add(11.7 + 0.5 + 0.5, () => { this.paperCounter(11.65, 0.2, 1.15, 0.6); this.coffeeMachine(11.8, 0.25); });
+      solid(11.65, 0.2, 1.15, 0.6);
+      poi(11.3, 1.1, 'water', 'back');
+      poi(12.2, 1.25, 'coffee', 'back', { w: 1.5 });
+
+      // ---- along the back-left wall: low bookshelf and the notice board
+      add(0.3 + 1.0 + 1.2, () => this.lowShelfY(0.12, 0.9, 2.4));
+      solid(0.1, 0.9, 0.5, 2.4);
+      poi(1.05, 1.5, 'read', 'back');
+      poi(1.05, 2.8, 'read', 'back');
+      const board = { y: workBottom + 0.1, len: 1.2 };
+      poi(0.95, board.y + 0.6, 'board', 'back', { w: 1.4 });
+      for (const [px, py] of [[0.55, 0.45], [W - 0.5, 0.45]]) { add(px + py, () => this.plant(px, py)); solid(px - 0.22, py - 0.22, 0.44, 0.44); }
+
+      // ---- rest corner (front left): sofa, low table, beanbags, rug
+      const RX = 1.2, RY = A + 0.1;
+      washes.push({ x: RX + 2.4, y: RY + 2.0, rx: 2.9, ry: 2.2, col: 'rgba(233,184,170,.22)' });
+      add(RX + 1.4 + RY, () => this.couch(RX, RY));
+      solid(RX, RY, 2.8, 0.8);
+      for (let k = 0; k < 3; k++) poi(RX + 0.5 + k * 0.9, RY + 0.6, 'couch', 'front', { sit: 0.36 });
+      add(RX + 0.6 + 0.8 + RY + 1.75, () => this.coffeeTable(RX + 0.6, RY + 1.4));
+      solid(RX + 0.6, RY + 1.4, 1.6, 0.7);
+      for (const [bx, by, col] of [[RX + 3.7, RY + 0.9, '#e9b8aa'], [RX + 3.5, RY + 2.3, '#b8c7b0']]) {
+        add(bx + by, () => this.beanbag(bx, by, col));
+        poi(bx, by, 'beanbag', 'front', { sit: 0.18 });
+      }
+
+      // ---- review table (front right): finished work gets looked over here
+      const VX = 11.2, VY = A + 0.9;
+      washes.push({ x: VX + 1.6, y: VY + 0.6, rx: 2.6, ry: 1.9, col: 'rgba(231,198,107,.16)' });
+      add(VX + 1.5 + VY + 0.5, () => this.reviewTable(VX, VY));
+      solid(VX, VY, 3.0, 1.0);
+      for (let k = 0; k < 3; k++) {
+        const cx = VX + 0.5 + k * 1.0;
+        add(cx + VY - 0.42, () => this.paperStool(cx, VY - 0.4));
+        add(cx + VY + 1.42, () => this.paperStool(cx, VY + 1.4));
+        poi(cx, VY - 0.4, 'review', 'front', { sit: 0.42 });
+        poi(cx, VY + 1.4, 'review', 'back', { sit: 0.42 });
+      }
+
+      // ---- the seasonal tree, front and centre, with snowmen
+      const tx = 8.4, ty = A + 1.9;
+      let tree = null;
+      if (XMAS) {
+        tree = { x: tx, y: ty };
+        add(tx + ty + 0.3, () => this.xmasTree(tx, ty));
+        poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
+        poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
+        poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
+        add(6.6 + ty - 1.0, () => this.snowman(6.6, ty - 1.0, 'santa'));
+        add(10.2 + ty + 1.0, () => this.snowman(10.2, ty + 1.0, 'top'));
+        solid(6.35, ty - 1.25, 0.5, 0.5);
+        solid(9.95, ty + 0.75, 0.5, 0.5);
+      } else {
+        add(tx + ty, () => this.plant(tx, ty));
+      }
+      solid(tx - 1.0, ty - 1.0, 2.0, 2.0, 0.05);
+
+      // ---- bungeoppang cart by the door in winter
+      const door = { x: 0.4, y: D - 1.1 };
+      if (WINTER) {
+        const bx = 1.6, by = D - 1.55;
+        this.pojangmacha(add, bx, by);
+        solid(bx, by, 1.5, 0.75, 0.05);
+        poi(bx + 0.75, by - 0.5, 'bake', 'front', { w: 3 });
+        poi(bx + 0.35, by + 1.2, 'bungeo', 'back', { w: 4 });
+        poi(bx + 1.15, by + 1.2, 'bungeo', 'back', { w: 4 });
+      }
+
+      return {
+        W, D, OW: W, OD: workBottom, MR: 0, PY: A, RW: 0, GX: W, pods: rows === 1 ? 2 : islands / 2 + 1,
+        tree, washes, board, village: true, paper: true, WH: 1.25,
+        grid, items, props, pois, desks, windows: [], posters: [], pp: { x0: 0, x1: 0, y: 0 }, door,
+      };
+    }
+
+    // Paper floor, low walls, watercolour washes.
+    paperRoom() {
+      const { W, D, washes = [], board } = this.plan;
+      const P = (x, y, z) => this.iso(x, y, z);
+      const c = this.ctx, t = this.t / 1000;
+      const ink = 'rgba(112,88,74,.55)';
+      const rnd = (i) => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+      // the paper board everything stands on, with a little thickness
+      const T = 0.28;
+      this.poly([P(0, D, 0), P(W, D, 0), P(W, D, -T), P(0, D, -T)], 'rgba(216,196,171,1)', ink, 1);
+      this.poly([P(W, 0, 0), P(W, D, 0), P(W, D, -T), P(W, 0, -T)], 'rgba(201,179,150,1)', ink, 1);
+      this.poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], 'rgba(250,246,237,1)', ink, 1.2);
+      // sparse planks, very faint
+      for (let y = 1.1; y < D - 0.2; y += 1.1) this.poly([P(0, y), P(W, y), P(W, y + 0.012), P(0, y + 0.012)], 'rgba(150,120,95,.10)');
+      // watercolour washes under each zone: a few soft overlapping blots
+      for (const [i, w] of washes.entries()) {
+        for (let k = 0; k < 5; k++) {
+          const ox = (rnd(i * 9 + k) - 0.5) * w.rx * 0.5, oy = (rnd(i * 9 + k + 4) - 0.5) * w.ry * 0.5;
+          const s = 0.7 + rnd(i * 9 + k + 2) * 0.35;
+          const pts = [];
+          for (let a = 0; a < 24; a++) {
+            const ang = a / 24 * Math.PI * 2, wob = 1 + (rnd(i * 50 + k * 24 + a) - 0.5) * 0.12;
+            pts.push(P(w.x + ox + Math.cos(ang) * w.rx * s * wob, w.y + oy + Math.sin(ang) * w.ry * s * wob));
+          }
+          this.poly(pts, w.col);
+        }
+      }
+      // paper grain
+      c.fillStyle = 'rgba(112,88,74,.07)';
+      for (let i = 0; i < W * D * 3; i++) { const q = P(rnd(i) * W, rnd(i + 77) * D); c.fillRect(q.x, q.y, 1, 1); }
+
+      // ---- low walls on the two back sides
+      const WH = this.plan.WH;
+      const dy = this.plan.door.y;
+      const wall = (len, at, gap) => {
+        const seg = (u0, u1) => {
+          if (u1 - u0 < 0.02) return;
+          this.poly([at(u0, 0), at(u1, 0), at(u1, WH), at(u0, WH)], 'rgba(243,235,221,1)', ink, 1);
+          this.poly([at(u0, 0), at(u1, 0), at(u1, 0.1), at(u0, 0.1)], 'rgba(216,196,171,1)');
+        };
+        if (gap) { seg(0, gap[0]); seg(gap[1], len); } else seg(0, len);
+      };
+      wall(W, (u, z) => P(u, 0, z));
+      wall(D, (u, z) => P(0, u, z), [dy - 0.6, dy + 0.6]);
+      // wall caps
+      this.poly([P(-0.14, -0.14, WH), P(W, -0.14, WH), P(W, 0, WH), P(0, 0, WH)], 'rgba(232,216,195,1)', ink, 1);
+      this.poly([P(-0.14, -0.14, WH), P(0, 0, WH), P(0, dy - 0.6, WH), P(-0.14, dy - 0.6, WH)], 'rgba(232,216,195,1)', ink, 1);
+      this.poly([P(-0.14, dy + 0.6, WH), P(0, dy + 0.6, WH), P(0, D, WH), P(-0.14, D, WH)], 'rgba(232,216,195,1)', ink, 1);
+      // door frame and mat
+      for (const g of [dy - 0.62, dy + 0.56]) this.poly([P(0, g, 0), P(0, g + 0.06, 0), P(0, g + 0.06, 1.85), P(0, g, 1.85)], 'rgba(216,189,152,1)', ink, 0.9);
+      this.poly([P(0, dy - 0.62, 1.8), P(0, dy + 0.62, 1.8), P(0, dy + 0.62, 1.95), P(0, dy - 0.62, 1.95)], 'rgba(216,189,152,1)', ink, 0.9);
+      this.poly([P(0.05, dy - 0.5), P(0.8, dy - 0.5), P(0.8, dy + 0.5), P(0.05, dy + 0.5)], 'rgba(233,184,170,.6)', ink, 0.8);
+      // little framed watercolours and a clock on the back wall
+      const frame = (u, z, w, h, draw) => {
+        this.poly([P(u, 0, z), P(u + w, 0, z), P(u + w, 0, z + h), P(u, 0, z + h)], 'rgba(250,246,237,1)', 'rgba(112,88,74,.7)', 1.4);
+        this.onWall('y0', u + 0.06, z + h - 0.06, draw);
+      };
+      const land = (cc, w) => {
+        cc.fillStyle = 'rgba(184,199,176,.8)'; cc.beginPath(); cc.moveTo(0, 14); cc.quadraticCurveTo(w * 0.3, 2, w * 0.6, 10); cc.quadraticCurveTo(w * 0.8, 4, w, 9); cc.lineTo(w, 16); cc.lineTo(0, 16); cc.fill();
+        cc.fillStyle = 'rgba(233,184,170,.8)'; cc.beginPath(); cc.arc(w * 0.75, 4, 3, 0, Math.PI * 2); cc.fill();
+      };
+      frame(2.6, 0.5, 0.75, 0.55, (cc) => land(cc, 18));
+      frame(5.3, 0.55, 0.6, 0.45, (cc) => { cc.fillStyle = 'rgba(217,207,224,.9)'; cc.beginPath(); cc.arc(9, 7, 6, 0, Math.PI * 2); cc.fill(); cc.fillStyle = 'rgba(231,198,107,.9)'; cc.beginPath(); cc.arc(9, 7, 2.5, 0, Math.PI * 2); cc.fill(); });
+      frame(8.0, 0.5, 0.75, 0.55, (cc) => { cc.fillStyle = 'rgba(184,199,176,.85)'; for (let i = 0; i < 3; i++) { cc.beginPath(); cc.ellipse(4 + i * 6, 10 - (i % 2) * 3, 2.5, 6, 0, 0, Math.PI * 2); cc.fill(); } });
+      this.onWall('y0', 10.4, 0.95, (cc) => {
+        cc.beginPath(); cc.arc(0, 0, 9, 0, Math.PI * 2); cc.fillStyle = '#faf6ed'; cc.fill(); cc.lineWidth = 1.4; cc.strokeStyle = 'rgba(112,88,74,.75)'; cc.stroke();
+        const d = new Date();
+        const hand = (ang, l, w) => { cc.beginPath(); cc.moveTo(0, 0); cc.lineTo(Math.sin(ang) * l, -Math.cos(ang) * l); cc.lineWidth = w; cc.strokeStyle = '#70584a'; cc.stroke(); };
+        hand(((d.getHours() % 12) + d.getMinutes() / 60) / 12 * Math.PI * 2, 4.5, 1.8);
+        hand((d.getMinutes() / 60) * Math.PI * 2, 6.8, 1.2);
+      });
+      // the notice board on the left wall
+      if (board) {
+        const b0 = board.y, b1 = board.y + board.len;
+        this.poly([P(0, b0, 0.4), P(0, b1, 0.4), P(0, b1, 1.1), P(0, b0, 1.1)], 'rgba(216,189,152,1)', 'rgba(112,88,74,.7)', 1.4);
+        const o = this.iso(0, b1, 0);
+        c.save(); c.translate(o.x, o.y); c.transform(1, -0.5, 0, 1, 0, 0);
+        const L = board.len * TW / 2;
+        const notes = [['#faf6ed', '할 일'], ['#e9b8aa', '버그'], ['#b8c7b0', '리뷰'], ['#f3e3b0', '배포']];
+        notes.forEach(([bg, txt], i) => {
+          const nx = 4 + (i % 2) * (L * 0.48), nz = -(1.0 - Math.floor(i / 2) * 0.28) * TH;
+          c.fillStyle = bg; c.fillRect(nx, nz, L * 0.4, 8);
+          c.strokeStyle = 'rgba(112,88,74,.4)'; c.lineWidth = 0.6; c.strokeRect(nx, nz, L * 0.4, 8);
+          c.fillStyle = '#70584a'; c.font = '700 5.5px ui-sans-serif, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(txt, nx + L * 0.2, nz + 4.5);
+        });
+        c.restore();
+      }
+      if (this.plan.tree) this.treeSkirt(this.plan.tree.x, this.plan.tree.y);
+      void t;
+    }
+
+    paperCounter(x, y, w, d) {
+      this.box(x, y, 0, w, d, 0.85, '#faf6ed', '#e8d8c3', '#d8c4ab');
+      this.box(x - 0.02, y - 0.02, 0.85, w + 0.04, d + 0.04, 0.06, '#faf6ed', '#e8d8c3', '#d8c4ab');
+    }
+
+    paperStool(x, y) {
+      this.cyl(x, y, 0, 0.06, 0.38, '#d8c4ab', '#d8c4ab');
+      this.cyl(x, y, 0.36, 0.24, 0.07, '#e8d8c3', '#d8c4ab');
+    }
+
+    // Low bookshelf standing against the left wall (books face +x).
+    lowShelfY(x, y, len) {
+      this.box(x, y, 0, 0.45, len, 1.0, '#e8d8c3', '#d8c4ab', '#faf6ed');
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const cols = ['#e9b8aa', '#b8c7b0', '#d8bd98', '#d9cfe0', '#e7c66b'];
+      for (const z0 of [0.12, 0.56]) {
+        let yy = y + 0.08, i = Math.floor(z0 * 10);
+        while (yy < y + len - 0.12) {
+          const w = 0.09 + ((i * 7) % 4) * 0.025, h = 0.3 + ((i * 5) % 3) * 0.05;
+          this.poly([P(x + 0.45, yy, z0), P(x + 0.45, yy + w, z0), P(x + 0.45, yy + w, z0 + h), P(x + 0.45, yy, z0 + h)], cols[i % cols.length], 'rgba(112,88,74,.4)', 0.6);
+          yy += w + 0.02; i++;
+          if (i % 7 === 3) yy += 0.18;
+        }
+      }
+    }
+
+    reviewTable(x, y) {
+      for (const [lx, ly] of [[0.25, 0.2], [2.75, 0.2], [0.25, 0.8], [2.75, 0.8]]) this.cyl(x + lx, y + ly, 0, 0.05, 0.72, '#b8c7b0', '#b8c7b0');
+      this.box(x, y, 0.72, 3.0, 1.0, 0.07, '#faf6ed', '#e8d8c3', '#d8c4ab');
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      // papers with red-pen marks, a laptop, a mug, a "검토" tent card
+      for (const [px, py, r] of [[0.5, 0.25, 0.1], [0.9, 0.45, -0.1], [2.0, 0.3, 0.05]]) {
+        this.poly([P(x + px, y + py, 0.795), P(x + px + 0.4, y + py + r, 0.795), P(x + px + 0.4, y + py + r + 0.3, 0.795), P(x + px, y + py + 0.3, 0.795)], '#ffffff', 'rgba(112,88,74,.4)', 0.6);
+        const q = this.iso(x + px + 0.2, y + py + 0.15, 0.8), c = this.ctx;
+        c.strokeStyle = 'rgba(214,90,80,.8)'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(q.x - 4, q.y); c.lineTo(q.x + 3, q.y - 1); c.moveTo(q.x - 3, q.y + 2); c.lineTo(q.x + 1, q.y + 2); c.stroke();
+      }
+      this.box(x + 1.3, y + 0.35, 0.79, 0.5, 0.35, 0.02, '#d8c4ab', '#c9b396', '#bca686');
+      this.poly([P(x + 1.3, y + 0.35, 0.81), P(x + 1.8, y + 0.35, 0.81), P(x + 1.8, y + 0.35, 1.1), P(x + 1.3, y + 0.35, 1.1)], '#e8d8c3', 'rgba(112,88,74,.5)', 0.8);
+      this.cyl(x + 2.6, y + 0.65, 0.79, 0.06, 0.12, '#7a4e33', '#e9b8aa');
+      const t0 = this.iso(x + 2.35, y + 0.2, 0.79), c = this.ctx;
+      c.fillStyle = '#faf6ed'; c.strokeStyle = 'rgba(112,88,74,.7)'; c.lineWidth = 0.9;
+      c.beginPath(); c.moveTo(t0.x - 9, t0.y); c.lineTo(t0.x - 7, t0.y - 11); c.lineTo(t0.x + 7, t0.y - 11); c.lineTo(t0.x + 9, t0.y); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#70584a'; c.font = '800 6px ui-sans-serif, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('검토', t0.x, t0.y - 5.5);
+    }
+
     glassX(add, x, y, d) {
       if (BARE) return;
       if (this.pal.cute) { add(x + y + d / 2 + 0.02, () => this.fenceRun((u, z) => this.iso(x, y + u, z), d, 0.62)); return; }
@@ -1363,6 +1623,7 @@
         let w = q.w || 1;
         if (q.pair) w = plan.pois.some((o) => o.pair === q.pair && o !== q && o.taken) ? 7 : 1.2;
         if (q.act === 'couch' || q.act === 'beanbag' || q.sleepy) w = sleepy ? 3 : 1.4;
+        if (q.act === 'review' && p.s.status === 'done' && now - (p.s.lastEventAt || 0) < 10 * 60_000) w = 6; // fresh work gets reviewed
         weighted.push([q, w]);
       }
       for (const d of plan.noNap ? [] : plan.desks) {
@@ -1548,6 +1809,7 @@
 
     drawRoom() {
       if (BARE) return;
+      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.xmasWalls(); return; }
       if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
@@ -2004,7 +2266,7 @@
       const c = this.ctx, t = this.t / 1000;
       const cols = ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
       // In the village the garland drapes along the fence instead of the ceiling.
-      const VIL = this.pal.cute, TOP = VIL ? 1.0 : WALL_H, SAG = VIL ? 0.1 : 0.2;
+      const VIL = this.pal.cute, PAPER = !!this.plan.paper, TOP = PAPER ? this.plan.WH + 0.12 : VIL ? 1.0 : WALL_H, SAG = VIL ? 0.1 : 0.2;
       const run = (len, at, seed) => {
         const pts = [];
         for (let u = 0.15; u <= len - 0.1; u += 0.12) pts.push([u, TOP - 0.18 - Math.sin(((u - 0.15) % 1.2) / 1.2 * Math.PI) * SAG]);
@@ -2053,15 +2315,15 @@
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(-r * 0.7, r * 0.5); cc.lineTo(-r * 0.7, r * 1.4); cc.closePath(); cc.fill();
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(r * 0.7, r * 0.5); cc.lineTo(r * 0.7, r * 1.4); cc.closePath(); cc.fill();
       });
-      wreath('x0', this.plan.door.y, VIL ? 1.25 : 1.3, 7);
+      wreath('x0', this.plan.door.y, PAPER ? 1.6 : VIL ? 1.25 : 1.3, 7);
       for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, VIL ? 0.5 : 1.45, 6);
-      wreath('x0', 3.5, VIL ? 0.5 : 1.5, 7);
+      wreath('x0', PAPER ? 3.2 : 3.5, PAPER ? 0.8 : VIL ? 0.5 : 1.5, 7);
       // MERRY XMAS banner of little flags on the left wall
       const word = 'MERRY XMAS';
       const y0 = 5.6, step = 0.32;
       for (let k = 0; k < word.length; k++) {
         if (word[k] === ' ') continue;
-        const yy = y0 + k * step, zz = (VIL ? 1.3 : 1.9) - Math.sin((k / (word.length - 1)) * Math.PI) * 0.15;
+        const yy = y0 + k * step, zz = (PAPER ? 1.0 : VIL ? 1.3 : 1.9) - Math.sin((k / (word.length - 1)) * Math.PI) * 0.15;
         this.onWall('x0', yy, zz, (cc) => {
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
