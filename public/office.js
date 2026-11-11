@@ -1271,6 +1271,57 @@
       };
     }
 
+    // Light snow falling only outside the office (GPT's spec): a few soft warm
+    // white dots in a band 8–45px outside the floor and walls, denser behind the
+    // back walls, sparse in front; they fade in and out, never pile up, and the
+    // office itself stays clear. Fewer flakes in a small window.
+    drawSnow() {
+      const { W, D, WH } = this.plan;
+      const P = (x, y, z) => this.iso(x, y, z);
+      const sil = [P(0, D, WH), P(0, 0, WH), P(W, 0, WH), P(W, 0, -0.28), P(W, D, -0.28), P(0, D, -0.28)];
+      // edges with how far out the band goes (back edges wider)
+      const edges = [[0, 1, 45, 3.5], [1, 2, 45, 3.5], [2, 3, 45, 0.75], [3, 4, 45, 0.75], [4, 5, 45, 0.75], [5, 0, 45, 0.75]]; // 70% behind the back walls
+      const inside = (x, y) => { let r = false; for (let i = 0, j = sil.length - 1; i < sil.length; j = i++) { const a = sil[i], b = sil[j]; if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) r = !r; } return r; };
+      const dist = (x, y) => {
+        let best = Infinity;
+        for (const [i, j] of edges) { const a = sil[i], b = sil[j], dx = b.x - a.x, dy = b.y - a.y, k = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - a.x - dx * k, y - a.y - dy * k)); }
+        return best;
+      };
+      const small = this.cw < 520;
+      const N = small ? 10 : 24;
+      const now = this.t / 1000, dt = Math.min(0.1, Math.max(0, now - (this.snowT || now))); this.snowT = now;
+      const totalW = edges.reduce((s2, e) => s2 + e[3], 0);
+      const spawn = (fresh) => {
+        let r = Math.random() * totalW, e = edges[0];
+        for (const ed of edges) { r -= ed[3]; if (r <= 0) { e = ed; break; } }
+        const a = sil[e[0]], b = sil[e[1]], k = Math.random();
+        const nx = b.y - a.y, ny = -(b.x - a.x), nl = Math.hypot(nx, ny);
+        const cx = (sil[0].x + sil[3].x) / 2, cy = (sil[1].y + sil[4].y) / 2;
+        let ux = nx / nl, uy = ny / nl;
+        if (((a.x + b.x) / 2 - cx) * ux + ((a.y + b.y) / 2 - cy) * uy < 0) { ux = -ux; uy = -uy; }
+        const off = 10 + Math.random() * (e[2] - 10);
+        const x = a.x + (b.x - a.x) * k + ux * off, y = a.y + (b.y - a.y) * k + uy * off - (fresh ? 0 : 30 + Math.random() * 30);
+        return { x0: x, y, r: 1 + Math.random() * 0.5, a: 0.35 + Math.random() * 0.2, vy: 8 + Math.random() * 8, amp: 2 + Math.random() * 3, per: 3 + Math.random() * 3, ph: Math.random() * 6.3, born: now, dying: 0 };
+      };
+      if (!this.snow || this.snowN !== N) { this.snow = Array.from({ length: N }, () => spawn(true)); this.snowN = N; }
+      const c = this.ctx;
+      c.save();
+      c.fillStyle = '#fff9ef';
+      for (let i = 0; i < this.snow.length; i++) {
+        const f = this.snow[i];
+        f.y += f.vy * dt;
+        const x = f.x0 + Math.sin(now * Math.PI * 2 / f.per + f.ph) * f.amp;
+        const d = dist(x, f.y), out = !inside(x, f.y);
+        if (!f.dying && (!out || d < 8 || d > 47)) f.dying = now;
+        let alpha = f.a * Math.min(1, (now - f.born) / 0.8);
+        if (f.dying) { alpha *= Math.max(0, 1 - (now - f.dying) / 1.0); if (now - f.dying > 1.0) { this.snow[i] = spawn(false); continue; } }
+        if (!out) continue;
+        c.globalAlpha = Math.min(0.55, alpha);
+        c.beginPath(); c.arc(x, f.y, f.r, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+    }
+
     // Paper floor, low walls, watercolour washes.
     paperRoom() {
       const { W, D, washes = [], board } = this.plan;
@@ -1833,7 +1884,7 @@
 
     drawRoom() {
       if (BARE) return;
-      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.xmasWalls(); return; }
+      if (this.plan.paper) { if (WINTER) this.drawSnow(); this.paperRoom(); if (XMAS) this.xmasWalls(); return; }
       if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
