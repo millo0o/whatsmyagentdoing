@@ -58,7 +58,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
+    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', cake: '🍰', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
   };
 
   // What everyone is up to, shown as a little caption ("🎮 게임 중").
@@ -72,6 +72,7 @@
     couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
     beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
     window: WINTER ? [['❄️', '눈 구경 중'], ['⛰️', '경치 구경 중']] : [['⛰️', '경치 구경 중'], ['☁️', '구름 구경 중'], ['🌤️', '날씨 구경 중']],
+    cake: [['🍰', '케이크 고르는 중'], ['🍓', '딸기 케이크 먹는 중'], ['🧁', '컵케이크 먹는 중']],
     weed: [['🌿', '풀 뽑는 중'], ['💰', '근로 중'], ['🌿', '제초 알바 중'], ['💦', '땀 흘리며 일하는 중']],
     pond: [['🐸', '개구리 구경 중'], ['🐟', '물고기 구경 중'], ['🪷', '연못 멍 중']],
     board: [['📋', '근로 공고 보는 중'], ['📋', '알바 찾는 중'], ['🤔', '어떤 일 할지 고민 중']],
@@ -541,6 +542,7 @@
     // ------------------------------------------------------------ floor plan
 
     buildPlan(nWorking) {
+      if (this.pal.cute) return this.buildVillage(nWorking);
       const pal = this.pal;
       const pods = Math.max(2, Math.ceil((nWorking + 2) / 4));
       const podCols = pods <= 4 ? 2 : 3;
@@ -800,6 +802,326 @@
         { y: 4.6, color: '#10a37f', text: 'TESTS ✓' },
       ];
       return { W, D, OW, OD, MR, PY, RW, GX, pods, tree, podRects, pond, weeds, board, grid, items, props, pois, desks, windows, posters, pp, door: { x: 0.4, y: D - 1.2 } };
+    }
+
+    // The village (cute palette): desk islands of two scattered on the grass
+    // between plants, a café in the back-right corner, a picnic table, a play
+    // corner, a nap corner, and the bungeoppang cart by the gate.
+    buildVillage(nWorking) {
+      let islands = Math.max(6, Math.ceil((nWorking + 3) / 2));
+      islands = Math.ceil(islands / 3) * 3;
+      const rows = islands / 3;
+      const Y0 = 1.6 + (rows - 1) * 3.8 + 2.9;     // where the work area ends
+      const W = 19.5, D = Math.max(15.5, Y0 + 7.6);
+      const grid = new Grid(W, D);
+      const items = [], pois = [], desks = [], props = [], patches = [];
+      const add = (depth, draw) => items.push({ depth, draw });
+      const prop = (t, o) => props.push({ t, ...o });
+      const solid = (x, y, w, d, pad) => grid.block(x, y, w, d, pad);
+      const poi = (x, y, act, face, opt = {}) => pois.push({ x, y, act, face, sit: 0, ...opt });
+      const TOY = ['#ffc8d8', '#bfe6d6', '#d8cdf6', '#ffe6a6', '#bcdcf6', '#ffd2b8'];
+
+      // ---- desk islands: two desks face to face, a round rug underneath
+      for (let i = 0; i < islands; i++) {
+        const r = Math.floor(i / 3), k = i % 3;
+        const x = 1.5 + k * 3.55 + (r % 2 ? 1.25 : 0), y = 1.6 + r * 3.8;
+        const col = TOY[i % TOY.length];
+        patches.push({ kind: 'oval', x: x + 0.7, y: y + 0.86, rx: 1.55, ry: 1.75, col: TOY[(i + 2) % TOY.length] });
+        desks.push({ x, y, side: 'n', seat: { x: x + 0.7, y: y - 0.45 }, col });
+        desks.push({ x, y: y + 0.92, side: 's', seat: { x: x + 0.7, y: y + 0.92 + 1.25 }, col });
+        solid(x, y, 1.4, 1.72, 0.08);
+        // a plant or a bush in the gap to the right
+        if (k < 2) {
+          const px = x + 1.4 + 1.08, py = y + 0.86 + (i % 2 ? 0.5 : -0.4);
+          const bush = (i + r) % 2 === 0;
+          add(px + py, () => (bush ? this.bush(px, py) : this.plant(px, py)));
+          solid(px - 0.25, py - 0.25, 0.5, 0.5);
+        }
+      }
+      const windows = [];
+      for (let x = 1.0; x < 11.5; x += 2.4) { windows.push(x); poi(x + 0.75, 0.6, 'window', 'back'); }
+
+      // ---- café (back right): counter along the fence, cake case, two tables
+      const CX = 12.6;
+      patches.push({ kind: 'deck', x0: CX - 0.4, y0: 0, x1: W, y1: 5.9, col: 'rgba(246,220,186,1)' });
+      add(CX - 0.2 + 0.45, () => this.waterCooler(CX - 0.2, 0.2));
+      solid(CX - 0.25, 0.15, 0.5, 0.5);
+      poi(CX + 0.05, 1.15, 'water', 'back');
+      const cw = W - 1.4 - (CX + 0.5);
+      for (let k = 0; k < Math.ceil(cw / 0.9); k++) {
+        const sx = CX + 0.5 + (cw / Math.ceil(cw / 0.9)) * k, sw = cw / Math.ceil(cw / 0.9);
+        add(sx + sw / 2 + 0.35 - 0.5, () => this.toyCounter(sx, 0.2, sw, 0.7));
+      }
+      solid(CX + 0.5, 0.2, cw, 0.7);
+      add(CX + 1.3 + 0.55, () => this.coffeeMachine(CX + 1.0, 0.32));
+      add(CX + 2.8 + 0.55, () => this.cakeCase(CX + 2.4, 0.3));
+      add(CX + 4.4 + 0.55, () => this.sink(CX + 4.1, 0.32));
+      poi(CX + 1.25, 1.35, 'coffee', 'back');
+      poi(CX + 2.8, 1.35, 'cake', 'back', { w: 1.6 });
+      poi(CX + 4.35, 1.35, 'sink', 'back');
+      add(W - 0.75 + 0.6, () => this.fridge(W - 1.15, 0.2));
+      solid(W - 1.15, 0.2, 0.85, 0.75);
+      poi(W - 0.75, 1.5, 'fridge', 'back');
+      for (const [tx, ty] of [[CX + 1.3, 3.6], [CX + 4.6, 3.4]]) {
+        add(tx + ty, () => this.roundTable(tx, ty));
+        solid(tx - 0.45, ty - 0.45, 0.9, 0.9);
+        for (const [sx, sy, face] of [[tx - 1.0, ty, 'front'], [tx + 1.0, ty, 'front'], [tx, ty + 1.0, 'back']]) {
+          add(sx + sy - 0.02, () => this.mushroomStool(sx, sy, TOY[Math.floor(sx * 7) % TOY.length]));
+          poi(sx, sy, 'stool', face, { sit: 0.4 });
+        }
+      }
+
+      // ---- picnic table with a parasol: the meeting spot
+      const mx = 13.0, my = 7.6;
+      add(mx + 1.2 + my + 0.5, () => this.picnicTable(mx, my));
+      solid(mx, my - 0.05, 2.6, 1.1);
+      for (let k = 0; k < 3; k++) {
+        const cx = mx + 0.45 + k * 0.85;
+        poi(cx, my - 0.45, 'meeting', 'front', { sit: 0.4 });
+        poi(cx, my + 1.45, 'meeting', 'back', { sit: 0.4 });
+      }
+
+      // ---- nap corner + lounge (front right)
+      const LY = Math.max(10.2, D - 5.2);
+      patches.push({ kind: 'deck', x0: 12.2, y0: LY - 0.3, x1: W, y1: D, col: 'rgba(250,226,200,1)' });
+      patches.push({ kind: 'rug', x0: 12.7, y0: LY + 0.5, x1: 16.3, y1: D - 0.5, col: 'rgba(214,236,250,1)' });
+      add(12.9 + LY + 0.6, () => this.couch(12.9, LY + 0.6));
+      solid(12.9, LY + 0.6, 2.8, 0.8);
+      for (let k = 0; k < 3; k++) poi(13.4 + k * 0.9, LY + 1.2, 'couch', 'front', { sit: 0.36 });
+      add(14.3 + LY + 2.3, () => this.coffeeTable(13.5, LY + 2.0));
+      solid(13.5, LY + 2.0, 1.6, 0.7);
+      for (const [bx, by, col] of [[13.2, D - 1.2, '#ffb7c9'], [15.6, D - 1.1, '#b9d4f4']]) {
+        add(bx + by, () => this.beanbag(bx, by, col));
+        poi(bx, by, 'beanbag', 'front', { sit: 0.18 });
+      }
+      // futons for napping
+      for (const [fx, fy, col] of [[17.0, LY + 1.0, '#ffd9e4'], [17.0, LY + 2.8, '#d9eefc']]) {
+        add(fx + fy + 0.3, () => this.futon(fx, fy, col));
+        poi(fx + 0.6, fy + 0.45, 'nap', 'front', { sit: 0.12, sleepy: true, futon: true });
+      }
+      // bookshelf on the lounge's back edge
+      const shX = 16.2;
+      for (let k = 0; k < 3; k++) {
+        const sx = shX + k * 0.95;
+        add(sx + 0.47 + LY - 0.6 + 0.2, () => { this.box(sx, LY - 0.75, 0, 0.95, 0.4, 1.35, '#ffe2c6', '#f4c9a4', '#e9b98f'); this.books(sx, sx + 0.95, LY - 0.35); });
+      }
+      solid(shX, LY - 0.75, 2.85, 0.4);
+      poi(shX + 0.6, LY + 0.1, 'read', 'back');
+      poi(shX + 2.0, LY + 0.1, 'read', 'back');
+      const ax = W - 1.0, ay = D - 1.6;
+      add(ax + 0.35 + ay + 0.35, () => this.arcade(ax, ay - 0.35));
+      solid(ax, ay - 0.35, 0.7, 0.7);
+      poi(ax + 0.35, ay + 0.8, 'arcade', 'back');
+
+      // ---- plaza with the tree (big Christmas tree in season)
+      const tx = 8.4, ty = Y0 + 2.0;
+      let tree = null;
+      if (XMAS) {
+        tree = { x: tx, y: ty };
+        add(tx + ty + 0.3, () => this.xmasTree(tx, ty));
+        poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
+        poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
+        poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
+        add(10.4 + Y0 + 1.0, () => this.snowman(10.4, Y0 + 1.0, 'top'));
+        add(6.3 + Y0 + 3.6, () => this.snowman(6.3, Y0 + 3.6, 'santa'));
+        solid(10.15, Y0 + 0.75, 0.5, 0.5);
+        solid(6.05, Y0 + 3.35, 0.5, 0.5);
+      } else {
+        add(tx + ty, () => this.roundTree(tx, ty));
+      }
+      solid(tx - 1.0, ty - 1.0, 2.0, 2.0, 0.05);
+
+      // ---- play corner (left): vending, ping-pong, foosball, job board
+      patches.push({ kind: 'mat', x0: 1.6, y0: Y0 + 0.1, x1: 5.6, y1: Y0 + 2.9, col: 'rgba(200,232,214,1)' });
+      add(0.5 + Y0 + 0.9, () => this.vending(0.12, Y0 + 0.5, '#ff9fb2'));
+      add(0.5 + Y0 + 1.7, () => this.vending(0.12, Y0 + 1.3, '#9fc4f2'));
+      solid(0.1, Y0 + 0.5, 0.75, 1.55);
+      poi(1.25, Y0 + 0.9, 'vending', 'back');
+      poi(1.25, Y0 + 1.7, 'vending', 'back');
+      const px = 2.3, py = Y0 + 0.8;
+      add(px + 1.3 + py + 0.7, () => this.pingpong(px, py));
+      solid(px, py, 2.6, 1.4, 0.05);
+      poi(px - 0.5, py + 0.7, 'pingpong', 'side', { pair: 'pp' });
+      poi(px + 3.1, py + 0.7, 'pingpong', 'side', { pair: 'pp' });
+      const pp = { x0: px - 0.2, x1: px + 2.8, y: py + 0.7 };
+      const fx = 2.6, fby = Y0 + 3.7;
+      add(fx + 0.8 + fby + 0.4, () => this.foosball(fx, fby));
+      solid(fx, fby, 1.6, 0.8, 0.05);
+      poi(fx - 0.45, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
+      poi(fx + 2.05, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
+      const board = { x: 0.28, y: Y0 + 2.6, len: 1.1 };
+      add(0.28 + Y0 + 3.15, () => this.jobBoard(board.x, board.y, board.len));
+      solid(0.1, Y0 + 2.55, 0.4, 1.2);
+      poi(1.05, Y0 + 3.15, 'board', 'back', { w: 1.6 });
+
+      // ---- front: bungeoppang cart by the gate, weeding patch, pond
+      const door = { x: 0.4, y: D - 1.2 };
+      const bx = 2.4, by = D - 2.25;
+      this.pojangmacha(add, bx, by);
+      solid(bx, by, 1.5, 0.75, 0.05);
+      poi(bx + 0.75, by - 0.5, 'bake', 'front', { w: 3 });
+      poi(bx + 0.35, by + 1.35, 'bungeo', 'back', { w: 5 });
+      poi(bx + 1.15, by + 1.35, 'bungeo', 'back', { w: 5 });
+      const weeds = { x0: 5.4, y0: D - 2.7, x1: 7.6, y1: D - 1.5 };
+      poi(5.9, D - 2.1, 'weed', 'front', { w: 2.2 });
+      poi(7.0, D - 2.0, 'weed', 'front', { w: 2.2 });
+      const pond = { x: 9.9, y: D - 1.7, rx: 1.15, ry: 0.75 };
+      solid(pond.x - 1.1, pond.y - 0.7, 2.2, 1.4, 0.05);
+      poi(pond.x - 0.4, pond.y - 1.1, 'pond', 'front', { w: 1.8 });
+      poi(pond.x + 0.9, pond.y - 0.9, 'pond', 'front', { w: 1.8 });
+      for (const [mx2, my2, col] of [[pond.x + 1.45, pond.y + 0.4, '#ef6b5b'], [pond.x - 1.4, pond.y + 0.6, '#f2a03d'], [5.1, D - 0.9, '#ef6b5b'], [11.6, Y0 + 0.4, '#b48cff']]) add(mx2 + my2, () => this.mushroom(mx2, my2, col));
+      for (const [bx2, by2] of [[11.6, 6.4], [0.6, 0.6], [11.4, Y0 + 3.4], [W - 0.6, 6.6]]) { add(bx2 + by2, () => this.bush(bx2, by2)); solid(bx2 - 0.3, by2 - 0.3, 0.6, 0.6); }
+      const path = [[0.6, door.y], [2.0, door.y + 0.35], [4.6, D - 0.75], [8.0, D - 0.6], [8.6, Y0 + 3.2], [11.6, Y0 + 2.4], [12.4, LY + 0.2]];
+
+      return {
+        W, D, OW: 12.2, OD: Y0, MR: 5.9, PY: LY, RW: W - 12.2, GX: W, pods: islands === 6 ? 2 : islands / 2,
+        tree, patches, pond, weeds, board, path, village: true,
+        grid, items, props, pois, desks, windows, posters: [], pp, door,
+      };
+    }
+
+    // ---- pastel toy furniture
+
+    // A short cylinder (stool seats, table legs) from (x, y) at height z.
+    cyl(x, y, z, r, h, top, side) {
+      const c = this.ctx, b = this.iso(x, y, z), t = this.iso(x, y, z + h);
+      const rx = r * TW * 0.72, ry = rx / 2, ink = this.pal.ink;
+      c.fillStyle = this.soft(side); c.strokeStyle = ink; c.lineWidth = 0.9;
+      c.beginPath(); c.moveTo(b.x - rx, b.y); c.ellipse(b.x, b.y, rx, ry, 0, Math.PI, 0, true); c.lineTo(t.x + rx, t.y); c.ellipse(t.x, t.y, rx, ry, 0, 0, Math.PI, true); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = this.soft(top); c.beginPath(); c.ellipse(t.x, t.y, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    }
+
+    toyDesk(dk, p) {
+      const { x, y } = dk, col = dk.col || '#ffc8d8', pal = this.pal;
+      const leg = this.shade(col, -30);
+      for (const [lx, ly] of [[0.12, 0.12], [1.28, 0.12], [0.12, 0.68], [1.28, 0.68]]) this.cyl(x + lx, y + ly, 0, 0.06, 0.68, leg, leg);
+      this.box(x, y, 0.68, 1.4, 0.8, 0.1, '#fffaf2', this.shade(col, -8), this.shade(col, -18));
+      this.box(x + 0.04, y + 0.04, 0.78, 1.32, 0.72, 0.012, col, col, col);
+      const worker = p && p.mode === 'work' ? p : null;
+      const frame = '#fffdf8', back = this.shade(col, -10);
+      if (dk.side === 's') {
+        const mx = x + 0.42, my = y + 0.1, mz = 0.79;
+        this.cyl(mx + 0.28, my + 0.08, mz, 0.05, 0.16, back, back);
+        this.box(mx, my, mz + 0.16, 0.56, 0.08, 0.44, frame, frame, '#f1e6da');
+        this.screen(mx + 0.05, my + 0.08, mz + 0.21, 0.46, 0.34, worker);
+        this.box(x + 0.48, y + 0.48, 0.79, 0.44, 0.16, 0.025, '#fffdf8', '#efe3d6', '#e6d8c9');
+      } else {
+        const mx = x + 0.42, my = y + 0.6, mz = 0.79;
+        this.box(x + 0.48, y + 0.16, 0.79, 0.44, 0.16, 0.025, '#fffdf8', '#efe3d6', '#e6d8c9');
+        this.cyl(mx + 0.28, my + 0.02, mz, 0.05, 0.16, back, back);
+        this.box(mx, my, mz + 0.16, 0.56, 0.08, 0.44, back, back, this.shade(back, 6));
+        // a little heart sticker on the back, and the status light
+        const g = this.iso(mx + 0.28, my + 0.08, mz + 0.4);
+        const c = this.ctx;
+        c.fillStyle = '#ff7f9f'; c.beginPath(); c.arc(g.x - 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.arc(g.x + 1.6, g.y - 1, 1.7, 0, Math.PI * 2); c.moveTo(g.x - 3.2, g.y - 0.5); c.lineTo(g.x, g.y + 3); c.lineTo(g.x + 3.2, g.y - 0.5); c.fill();
+        if (worker) {
+          const s = this.iso(mx + 0.28, my + 0.08, mz + 0.55);
+          c.fillStyle = STATUS_COLOR[worker.s.status] || '#888';
+          c.globalAlpha = 0.6 + 0.4 * Math.sin(this.t / 400 + worker.phase);
+          c.beginPath(); c.arc(s.x, s.y, 1.8, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 1;
+        }
+      }
+      // toys on the desk, stable per desk: mushroom lamp, mug, plant, snack
+      const h = hash(`${x.toFixed(1)},${y.toFixed(1)}`);
+      const zt = 0.79;
+      if (h % 3 === 0) {
+        const lx = x + 1.15, ly = y + 0.32;
+        this.cyl(lx, ly, zt, 0.025, 0.2, '#fff1d6', '#fff1d6');
+        const q = this.iso(lx, ly, zt + 0.2), c = this.ctx;
+        c.fillStyle = 'rgba(255,236,160,.35)'; c.beginPath(); c.arc(q.x, q.y + 2, 9, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#ffb3c6'; c.strokeStyle = pal.ink; c.lineWidth = 0.8; c.beginPath(); c.ellipse(q.x, q.y, 6, 4.5, 0, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(q.x - 2, q.y - 2, 1, 0, Math.PI * 2); c.arc(q.x + 2, q.y - 3, 0.9, 0, Math.PI * 2); c.fill();
+      } else if (h % 3 === 1) {
+        this.cyl(x + 1.16, y + 0.35, zt, 0.06, 0.12, '#7a4e33', '#fffdf8');
+      }
+      if (h % 5 === 1) {
+        this.cyl(x + 0.2, y + 0.3, zt, 0.06, 0.09, this.shade(col, -25), this.shade(col, -25));
+        const q = this.iso(x + 0.2, y + 0.3, zt + 0.09), c = this.ctx;
+        c.fillStyle = '#8fd19a'; c.beginPath(); c.ellipse(q.x - 2, q.y - 4, 2.5, 5, -0.4, 0, Math.PI * 2); c.ellipse(q.x + 2, q.y - 4, 2.5, 5, 0.4, 0, Math.PI * 2); c.fill();
+      }
+      if (h % 4 === 2) this.box(x + 0.12, y + 0.45, zt, 0.22, 0.15, 0.05, '#ffe08a', '#f2cf6e', '#e6c15c');
+    }
+
+    toyChair(dk, p) {
+      const seated = p && !p.path.length && p.pose === 'sit' && Math.hypot(p.x - dk.seat.x, p.y - dk.seat.y) < 0.05;
+      const ox = seated ? 0 : 0.1, oy = seated ? 0 : dk.side === 's' ? 0.16 : -0.16;
+      const col = this.shade(dk.col || '#ffc8d8', -6);
+      this.cyl(dk.seat.x + ox, dk.seat.y + oy, 0, 0.07, 0.28, '#fffaf2', '#fffaf2');
+      this.cyl(dk.seat.x + ox, dk.seat.y + oy, 0.26, 0.26, 0.08, col, this.shade(col, -14));
+    }
+
+    mushroomStool(x, y, col) {
+      this.cyl(x, y, 0, 0.12, 0.3, '#fff6e8', '#fff6e8');
+      this.cyl(x, y, 0.28, 0.27, 0.1, col, this.shade(col, -16));
+      const q = this.iso(x, y, 0.38), c = this.ctx;
+      c.fillStyle = '#ffffff'; for (const [ox, oy, r] of [[-6, 0, 1.6], [4, -2, 1.9], [2, 3, 1.2]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, r, 0, Math.PI * 2); c.fill(); }
+    }
+
+    toyCounter(x, y, w, d) {
+      this.box(x, y, 0, w, d, 0.82, '#d9f2e6', '#bfe6d6', '#a9d9c4');
+      this.box(x - 0.02, y - 0.02, 0.82, w + 0.04, d + 0.04, 0.08, '#fffaf2', '#f1e3d3', '#e7d6c3');
+      const c = this.ctx, q = this.iso(x + w / 2, y + d, 0.42);
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(q.x, q.y, 2.2, 0, Math.PI * 2); c.fill();
+    }
+
+    cakeCase(x, y) {
+      this.box(x, y, 0.9, 0.85, 0.5, 0.06, '#ffd2df', '#f7b9cb', '#eea7bb');
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      this.poly([P(x, y + 0.5, 0.96), P(x + 0.85, y + 0.5, 0.96), P(x + 0.85, y + 0.5, 1.36), P(x, y + 0.5, 1.36)], 'rgba(220,240,255,.35)', 'rgba(140,180,210,.7)');
+      const c = this.ctx;
+      [['#fff3f6', '#ff8fae'], ['#fff7dc', '#ffcf5a'], ['#f3eaff', '#b48cff']].forEach(([cream, top], i) => {
+        const q = this.iso(x + 0.18 + i * 0.25, y + 0.3, 0.98);
+        c.fillStyle = cream; c.fillRect(q.x - 4, q.y - 6, 8, 6);
+        c.fillStyle = top; c.beginPath(); c.ellipse(q.x, q.y - 6, 4, 2, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#e8413a'; c.beginPath(); c.arc(q.x, q.y - 8, 1.4, 0, Math.PI * 2); c.fill();
+      });
+      this.poly([P(x, y, 1.36), P(x + 0.85, y, 1.36), P(x + 0.85, y + 0.5, 1.36), P(x, y + 0.5, 1.36)], 'rgba(220,240,255,.3)', 'rgba(140,180,210,.7)');
+    }
+
+    picnicTable(x, y) {
+      const wood = '#ffd9b0', woodL = '#f3c08e', woodR = '#e6ad78';
+      for (const by of [y - 0.45, y + 1.15]) {
+        for (const lx of [0.15, 2.35]) this.box(x + lx, by + 0.05, 0, 0.08, 0.08, 0.36, woodL, woodL, woodR);
+        this.box(x, by, 0.36, 2.6, 0.3, 0.06, '#ffe8cf', woodL, woodR);
+      }
+      for (const lx of [0.2, 2.3]) this.box(x + lx, y + 0.45, 0, 0.1, 0.1, 0.72, woodL, woodL, woodR);
+      this.box(x, y, 0.72, 2.6, 1.0, 0.07, wood, woodL, woodR);
+      // red-check cloth stripe
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      for (let k = 0; k < 5; k++) this.poly([P(x + 0.9 + (k % 2) * 0.16, y + k * 0.2, 0.795), P(x + 1.06 + (k % 2) * 0.16, y + k * 0.2, 0.795), P(x + 1.06 + (k % 2) * 0.16, y + k * 0.2 + 0.2, 0.795), P(x + 0.9 + (k % 2) * 0.16, y + k * 0.2 + 0.2, 0.795)], 'rgba(255,140,150,.7)');
+      // parasol
+      const cx = x + 1.3, cy = y + 0.5;
+      this.cyl(cx, cy, 0.79, 0.025, 1.3, '#fffdf8', '#fffdf8');
+      const top = this.iso(cx, cy, 2.25), c = this.ctx, R = 58;
+      const cols = ['#ffb3c6', '#fffaf2'];
+      for (let k = 0; k < 8; k++) {
+        const a0 = Math.PI + (k / 8) * Math.PI, a1 = Math.PI + ((k + 1) / 8) * Math.PI;
+        c.fillStyle = cols[k % 2]; c.strokeStyle = this.pal.ink; c.lineWidth = 0.9;
+        c.beginPath(); c.moveTo(top.x, top.y - 14); c.lineTo(top.x + Math.cos(a0) * R, top.y + 10 + Math.sin(a0) * 4); c.lineTo(top.x + Math.cos(a1) * R, top.y + 10 + Math.sin(a1) * 4); c.closePath(); c.fill(); c.stroke();
+      }
+      c.fillStyle = '#ff8fae'; c.beginPath(); c.arc(top.x, top.y - 15, 2.5, 0, Math.PI * 2); c.fill();
+      if (WINTER) { c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(top.x, top.y - 6, 26, 5, 0, Math.PI, 0); c.fill(); }
+    }
+
+    futon(x, y, col) {
+      this.box(x, y, 0, 1.25, 0.9, 0.1, col, this.shade(col, -10), this.shade(col, -20));
+      this.box(x + 0.08, y + 0.1, 0.1, 0.3, 0.7, 0.1, '#fffdf8', '#f1e6da', '#e6d8c9');
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      this.poly([P(x + 0.45, y + 0.05, 0.12), P(x + 1.25, y + 0.05, 0.12), P(x + 1.25, y + 0.9, 0.12), P(x + 0.45, y + 0.9, 0.12)], this.shade(col, 12), this.pal.ink, 0.8);
+      const c = this.ctx, q = this.iso(x + 0.85, y + 0.5, 0.12);
+      c.fillStyle = 'rgba(255,255,255,.7)'; for (const [ox, oy] of [[-8, 0], [0, -3], [8, 1], [-2, 4]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, 1.6, 0, Math.PI * 2); c.fill(); }
+    }
+
+    bush(x, y) {
+      const c = this.ctx, q = this.iso(x, y, 0);
+      c.fillStyle = 'rgba(120,80,60,.14)'; c.beginPath(); c.ellipse(q.x, q.y, 16, 7, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = this.pal.ink; c.lineWidth = 0.9;
+      const g = WINTER ? ['#a9d39b', '#bfe0b2'] : ['#8fcf86', '#a8dc9c'];
+      for (const [ox, oy, r, k] of [[-8, -6, 9, 0], [8, -6, 9, 0], [0, -12, 10, 1]]) { c.fillStyle = g[k]; c.beginPath(); c.arc(q.x + ox, q.y + oy, r, 0, Math.PI * 2); c.fill(); c.stroke(); }
+      c.fillStyle = g[1]; for (const [ox, oy, r] of [[-8, -6, 8], [8, -6, 8], [0, -12, 9]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, r, 0, Math.PI * 2); c.fill(); }
+      if (WINTER) { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(q.x, q.y - 20, 8, 3, 0, 0, Math.PI * 2); c.fill(); }
+      else { c.fillStyle = '#ffb3c6'; for (const [ox, oy] of [[-9, -8], [6, -13], [9, -4]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, 2, 0, Math.PI * 2); c.fill(); } }
     }
 
     glassX(add, x, y, d) {
@@ -1357,68 +1679,70 @@
     // sky follows the real time of day), a flower-arch gate, a pond and a
     // weeding patch.
     villageRoom() {
-      const { W, D, OW, MR, PY, pp, podRects, pond, weeds } = this.plan;
-      const GX = this.plan.GX || OW;
+      const { W, D, patches = [], pond, weeds, pp } = this.plan;
       const pal = this.pal;
       const P = (x, y, z) => this.iso(x, y, z);
       const c = this.ctx, t = this.t / 1000;
       const rnd = (i) => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
-      const inDeck = (x, y) => (x > GX && y < MR) || (x > OW && y > MR) || podRects.some((r) => x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1);
 
       // ---- walls: sky, hills, little houses, fence
       this.villageWall(W, (u, z) => P(u, 0, z), 0, null);
       this.villageWall(D, (u, z) => P(0, u, z), 3, this.plan.door.y);
 
-      // ---- meadow
-      for (let x = 0; x < Math.ceil(W); x++) {
-        for (let y = 0; y < Math.ceil(D); y++) {
-          const x1 = Math.min(W, x + 1), y1 = Math.min(D, y + 1);
-          this.poly([P(x, y), P(x1, y), P(x1, y1), P(x, y1)], (x + y) % 2 ? 'rgba(198,230,163,1)' : 'rgba(188,224,152,1)');
-        }
+      // ---- one continuous lawn (no tiles): soft light and shade patches,
+      // then blades of grass and wild flowers on top
+      this.poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], 'rgba(190,226,154,1)');
+      c.save();
+      c.beginPath(); const q0 = [P(0, 0), P(W, 0), P(W, D), P(0, D)]; c.moveTo(q0[0].x, q0[0].y); for (const q of q0) c.lineTo(q.x, q.y); c.closePath(); c.clip();
+      for (let i = 0; i < W * D * 0.35; i++) {
+        const q = P(rnd(i + 1) * W, rnd(i + 2) * D), r = 18 + rnd(i + 3) * 30;
+        c.fillStyle = i % 2 ? 'rgba(214,240,178,.35)' : 'rgba(160,206,128,.22)';
+        c.beginPath(); c.ellipse(q.x, q.y, r, r * 0.5, 0, 0, Math.PI * 2); c.fill();
       }
-      // grass tufts and little flowers
+      c.restore();
+      const covered = (x, y) => patches.some((pa) => pa.kind === 'oval'
+        ? ((x - pa.x) / pa.rx) ** 2 + ((y - pa.y) / pa.ry) ** 2 < 1
+        : x > pa.x0 && x < pa.x1 && y > pa.y0 && y < pa.y1);
       const FL = ['#ffffff', '#ffc7d6', '#fff3a6', '#d9c7ff'];
-      for (let i = 0; i < W * D * 1.1; i++) {
+      for (let i = 0; i < W * D * 1.6; i++) {
         const x = 0.2 + rnd(i) * (W - 0.4), y = 0.2 + rnd(i + 999) * (D - 0.4);
-        if (inDeck(x, y)) continue;
+        if (covered(x, y)) continue;
         const q = P(x, y);
-        if (i % 6 === 0) {
+        if (i % 9 === 0) {
           c.fillStyle = FL[i % FL.length];
           for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; c.beginPath(); c.arc(q.x + Math.cos(a) * 1.8, q.y + Math.sin(a) * 1.1 - 1, 1.2, 0, Math.PI * 2); c.fill(); }
           c.fillStyle = '#f5b83d'; c.beginPath(); c.arc(q.x, q.y - 1, 0.9, 0, Math.PI * 2); c.fill();
         } else {
-          c.strokeStyle = 'rgba(112,170,92,.75)'; c.lineWidth = 1; c.lineCap = 'round';
-          c.beginPath(); c.moveTo(q.x - 2, q.y); c.lineTo(q.x - 3, q.y - 3.5); c.moveTo(q.x, q.y); c.lineTo(q.x, q.y - 4.5); c.moveTo(q.x + 2, q.y); c.lineTo(q.x + 3, q.y - 3.5); c.stroke();
+          const g = 120 + Math.floor(rnd(i + 7) * 50);
+          c.strokeStyle = `rgba(${g - 30},${g + 50},${g - 40},.7)`; c.lineWidth = 1; c.lineCap = 'round';
+          c.beginPath(); c.moveTo(q.x - 1.5, q.y); c.lineTo(q.x - 2.5, q.y - 3); c.moveTo(q.x, q.y); c.lineTo(q.x + 0.3, q.y - 4); c.moveTo(q.x + 1.5, q.y); c.lineTo(q.x + 2.6, q.y - 3); c.stroke();
         }
       }
       this.poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], null, pal.ink, 1.4);
 
-      // ---- wooden decks: under every desk pod, the meeting nook and the lounge
-      const deck = (x0, y0, x1, y1, col, line) => {
-        const h = 0.05;
-        this.poly([P(x0, y1, 0), P(x1, y1, 0), P(x1, y1, h), P(x0, y1, h)], this.shade(col, -28), pal.ink, 0.8);
-        this.poly([P(x1, y0, 0), P(x1, y1, 0), P(x1, y1, h), P(x1, y0, h)], this.shade(col, -40), pal.ink, 0.8);
-        this.poly([P(x0, y0, h), P(x1, y0, h), P(x1, y1, h), P(x0, y1, h)], col, pal.ink, 0.9);
-        for (let y = y0 + 0.34; y < y1 - 0.05; y += 0.34) this.poly([P(x0, y, h), P(x1, y, h), P(x1, y + 0.015, h), P(x0, y + 0.015, h)], line);
-      };
-      for (const r of podRects) deck(r.x0, r.y0, r.x1, r.y1, 'rgba(246,216,176,1)', 'rgba(185,135,95,.32)');
-      deck(GX, 0, W, MR, 'rgba(240,206,168,1)', 'rgba(170,120,85,.3)');
-      deck(OW, PY, W, D, 'rgba(246,220,186,1)', 'rgba(185,135,95,.28)');
-      // the café plaza between them: cream cobbles
-      for (let i = 0; i < Math.ceil((W - OW) * 2); i++) {
-        for (let j = 0; j < Math.ceil((PY - MR) * 2); j++) {
-          const x = OW + i / 2 + 0.03, y = MR + j / 2 + 0.03;
-          const x1 = Math.min(W, x + 0.44), y1 = Math.min(PY, y + 0.44);
-          this.poly([P(x, y), P(x1, y), P(x1, y1), P(x, y1)], (i + j) % 3 ? 'rgba(247,238,222,1)' : 'rgba(250,226,226,1)', 'rgba(160,130,100,.25)', 0.8);
+      // ---- patches: rugs under the islands, decks for café and lounge, play mat
+      for (const pa of patches) {
+        if (pa.kind === 'oval') {
+          const ring = (k) => { const pts = []; for (let a = 0; a < 32; a++) pts.push(P(pa.x + Math.cos(a / 32 * Math.PI * 2) * pa.rx * k, pa.y + Math.sin(a / 32 * Math.PI * 2) * pa.ry * k)); return pts; };
+          this.poly(ring(1), pa.col, pal.ink, 1);
+          this.poly(ring(0.86), null, 'rgba(255,255,255,.8)', 1.4);
+        } else if (pa.kind === 'deck') {
+          const { x0, y0, x1, y1, col } = pa, h = 0.05;
+          this.poly([P(x0, y1, 0), P(x1, y1, 0), P(x1, y1, h), P(x0, y1, h)], this.shade(col, -28), pal.ink, 0.8);
+          this.poly([P(x0, y0, h), P(x1, y0, h), P(x1, y1, h), P(x0, y1, h)], col, pal.ink, 0.9);
+          for (let y = y0 + 0.34; y < y1 - 0.05; y += 0.34) this.poly([P(x0, y, h), P(x1, y, h), P(x1, y + 0.015, h), P(x0, y + 0.015, h)], 'rgba(185,135,95,.28)');
+        } else if (pa.kind === 'rug') {
+          const { x0, y0, x1, y1, col } = pa;
+          this.poly([P(x0, y0, 0.06), P(x1, y0, 0.06), P(x1, y1, 0.06), P(x0, y1, 0.06)], col, pal.ink, 0.9);
+          this.poly([P(x0 + 0.2, y0 + 0.2, 0.06), P(x1 - 0.2, y0 + 0.2, 0.06), P(x1 - 0.2, y1 - 0.2, 0.06), P(x0 + 0.2, y1 - 0.2, 0.06)], null, 'rgba(255,255,255,.85)', 1.4);
+        } else if (pa.kind === 'mat') {
+          const { x0, y0, x1, y1, col } = pa;
+          this.poly([P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)], col, 'rgba(255,255,255,.8)', 1.4);
         }
       }
-      this.poly([P(OW + 0.3, PY + 0.6), P(OW + 4.3, PY + 0.6), P(OW + 4.3, D - 0.4), P(OW + 0.3, D - 0.4)], pal.rug);
-      this.poly([P(OW + 0.5, PY + 0.8), P(OW + 4.1, PY + 0.8), P(OW + 4.1, D - 0.6), P(OW + 0.5, D - 0.6)], null, pal.rugEdge);
-      this.poly([P(pp.x0 - 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y + 1.3), P(pp.x0 - 0.6, pp.y + 1.3)], 'rgba(168,214,150,1)', 'rgba(255,255,255,.7)', 1.2);
 
       // ---- stepping-stone path from the gate into the village
-      const dy = this.plan.door.y;
-      const path = [[0.6, dy], [3.9, dy + 0.25], [4.2, Math.min(dy - 2.2, 11)], [6.6, 10.75], [OW, 11.2]];
+      const path = this.plan.path || [];
       let n = 0;
       for (let k = 0; k < path.length - 1; k++) {
         const [ax, ay] = path[k], [bx, by] = path[k + 1];
@@ -1426,9 +1750,10 @@
         for (let u = 0; u < len; u += 0.62) {
           const x = ax + (bx - ax) * u / len + (rnd(n) - 0.5) * 0.12, y = ay + (by - ay) * u / len + (rnd(n + 50) - 0.5) * 0.12;
           n++;
+          if (this.plan.grid.blocked(x, y)) continue;
           const pts = [];
           for (let a = 0; a < 10; a++) pts.push(P(x + Math.cos(a / 10 * Math.PI * 2) * 0.24, y + Math.sin(a / 10 * Math.PI * 2) * 0.2));
-          this.poly(pts, 'rgba(236,228,214,1)', 'rgba(150,125,100,.45)', 0.9);
+          this.poly(pts, 'rgba(240,233,220,1)', 'rgba(150,125,100,.45)', 0.9);
         }
       }
 
@@ -1484,17 +1809,6 @@
       }
       if (this.plan.tree) this.treeSkirt(this.plan.tree.x, this.plan.tree.y);
 
-      // ---- the meeting nook's standing whiteboard
-      const wx = GX + 0.5;
-      for (const lx of [wx + 0.15, wx + 2.35]) this.poly([P(lx, 0.05, 0), P(lx + 0.08, 0.05, 0), P(lx + 0.08, 0.05, 0.85), P(lx, 0.05, 0.85)], '#b8835a', pal.ink, 0.8);
-      this.poly([P(wx, 0.05, 0.8), P(wx + 2.6, 0.05, 0.8), P(wx + 2.6, 0.05, 1.95), P(wx, 0.05, 1.95)], '#fdfdfb', '#b8835a', 2);
-      this.onWall('y0', wx + 0.25, 1.75, (cc) => {
-        cc.lineWidth = 1.4;
-        cc.strokeStyle = '#3b8ee0'; cc.beginPath(); cc.moveTo(0, 0); cc.lineTo(22, 0); cc.moveTo(0, 7); cc.lineTo(36, 7); cc.stroke();
-        cc.strokeStyle = '#c96442'; cc.strokeRect(46, -2, 20, 12); cc.strokeRect(80, 6, 20, 12);
-        cc.beginPath(); cc.moveTo(66, 4); cc.lineTo(80, 12); cc.stroke();
-        cc.strokeStyle = '#5f9a4c'; cc.beginPath(); cc.moveTo(0, 22); for (let i = 0; i < 8; i++) cc.lineTo(i * 8, 22 - ((i * 37) % 13)); cc.stroke();
-      });
     }
 
     // One wall of the village: sky that follows the real time of day, rolling
@@ -2325,6 +2639,7 @@
     }
 
     desk(dk, p) {
+      if (this.plan.village) return this.toyDesk(dk, p);
       const pal = this.pal;
       const { x, y } = dk;
       for (const [lx, ly] of [[0.05, 0.05], [1.27, 0.05], [0.05, 0.67], [1.27, 0.67]]) {
@@ -2408,6 +2723,7 @@
     }
 
     chair(dk, p) {
+      if (this.plan.village) return this.toyChair(dk, p);
       const pal = this.pal;
       const sx = dk.seat.x - 0.25, sy = dk.seat.y - 0.22;
       const seated = p && !p.path.length && p.pose === 'sit' && Math.hypot(p.x - dk.seat.x, p.y - dk.seat.y) < 0.05;
