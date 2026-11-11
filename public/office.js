@@ -3899,7 +3899,7 @@
       const [icon, text] = list[Math.floor((p.capSeed || 0) * list.length) % list.length];
       const c = this.ctx;
       c.save();
-      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.88;
+      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.73;
       c.textBaseline = 'middle';
       c.font = '600 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
       const ICON = 12, tw = c.measureText(text).width;
