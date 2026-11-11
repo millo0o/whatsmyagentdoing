@@ -266,6 +266,8 @@ function applyCodex(s, d) {
       if (p.source && typeof p.source === 'object' && p.source.subagent) s.subagent = true;
       if (p.parent_thread_id) { s.parentId = p.parent_thread_id; s.subagent = true; }
       if (p.thread_source && p.thread_source !== 'user') s.subagent = true;
+      // `codex exec`: a one-off run, usually another agent asking Codex for help
+      if (p.source === 'exec' || p.originator === 'codex_exec') s.exec = true;
       return;
     case 'turn_context':
       if (p.model) s.model = p.model;

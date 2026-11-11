@@ -995,7 +995,7 @@ function hideTip() { tipKey = null; tipPinned = false; tip.style.display = 'none
 const officeOpts = {
   compact: PIP,
   onFrame: (renderer) => popout?.drawPreview(renderer),
-  label: (s) => (s.agent === 'omp' && s.subagent && s.title) || s.project || AGENT_NAME[s.agent] || s.agent,
+  label: (s) => s.label || (s.agent === 'omp' && s.subagent && s.title) || s.project || AGENT_NAME[s.agent] || s.agent,
   onHover(s, at, click) {
     // In full screen a click opens the agent in the side panel instead of pinning a card.
     if (click && state.full && s) { hideTip(); openDetail(s.key); return; }
@@ -1312,7 +1312,7 @@ function renderSide() {
     return `<div class="side-group">${esc(L[g.key])} · ${items.length}</div>` + items.map((s, i) => {
       const act = s.stuck ? L.stuck(s.stuck) : s.activity || (s.status === 'done' && s.reply) || s.title || '';
       return `<button class="srow${s.subagent ? ' sub' : ''}" data-key="${esc(s.key)}" style="--s:${statusColor(s.status)};--i:${Math.min(i + (g.key === 'working' ? 3 : g.key === 'finished' ? 8 : 0), 14)}">
-        ${agentLogo(s.agent) || '<span></span>'}<span class="nm">${esc(s.project || AGENT_NAME[s.agent] || s.agent)}</span>
+        ${agentLogo(s.agent) || '<span></span>'}<span class="nm">${esc(s.label || s.project || AGENT_NAME[s.agent] || s.agent)}</span>
         <span class="tm" data-time="${esc(s.key)}"></span>
         <span class="st"><i></i><b>${esc(L[s.status] || s.status)}</b>${act ? `<span>${esc(act)}</span>` : ''}</span></button>`;
     }).join('');
@@ -1357,7 +1357,7 @@ function renderDetail(scrollDown) {
   const now = Date.now() - state.skew;
   const titleEl = document.getElementById('detailTitle');
   if (!titleEl.querySelector('input')) {
-    const th = `${agentLogo(s.agent)}<span class="dname">${esc(s.project || AGENT_NAME[s.agent] || s.agent)}</span><button class="rename" data-rename="${esc(s.key)}" title="이름 바꾸기">✏️</button>`;
+    const th = `${agentLogo(s.agent)}<span class="dname">${esc(s.label || s.project || AGENT_NAME[s.agent] || s.agent)}</span><button class="rename" data-rename="${esc(s.key)}" title="이름 바꾸기">✏️</button>`;
     if (titleEl.dataset.html !== th) { titleEl.innerHTML = th; titleEl.dataset.html = th; }
   }
   // Fetch again whenever the agent logged something new.

@@ -58,6 +58,7 @@ function view(s, now, { privacy }) {
     parentId: s.parentId,
     subagent: s.subagent,
     cwd: s.cwd,
+    ...(s.exec ? { exec: true } : {}),
     project: s.cwd ? `${s.agent === 'copilot' ? 'workspace-' : ''}${path.basename(s.cwd)}` : null,
     title: s.title,
     model: s.model,
@@ -130,9 +131,19 @@ try { names = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')) || {}; } catch { /
 
 function snapshot(watcher, opts) {
   const now = Date.now();
-  const raw = watcher.sessions().filter((s) => !isHidden(s));
+  // One-off `codex exec` runs leave the office a few minutes after they finish.
+  const raw = watcher.sessions().filter((s) => !isHidden(s)
+    && !(s.exec && ['done', 'idle', 'interrupted'].includes(s.status) && now - (s.lastEventAt || s.mtime || 0) > 5 * 60_000));
   const sessions = raw.map((s) => view(s, now, opts));
-  for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; }
+  // A `codex exec` run in the same folder as a Claude session is Claude asking
+  // Codex for help (a review, a second opinion): call it Claude's helper.
+  for (const s of sessions) {
+    if (s.agent !== 'codex' || !s.exec) continue;
+    const boss = sessions.find((o) => o.agent === 'claude' && o.cwd && o.cwd === s.cwd);
+    if (boss) { s.label = 'Claude 도우미'; s.helperOf = boss.key; if (!s.title) s.title = 'Claude가 부탁한 일'; }
+    else s.label = 'Codex 실행';
+  }
+  for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; delete s.label; }
   sessions.sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
   return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: summary(sessions, now) };
 }
