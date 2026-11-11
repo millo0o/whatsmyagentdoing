@@ -2288,26 +2288,30 @@
       const { W, D, windows } = this.plan;
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
-      const cols = ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
-      // In the village the garland drapes along the fence instead of the ceiling.
+      // In the village the garland drapes along the fence instead of the ceiling;
+      // in the paper office everything takes the milk-tea palette and a pen line.
       const VIL = this.pal.cute, PAPER = !!this.plan.paper, TOP = PAPER ? this.plan.WH + 0.12 : VIL ? 1.0 : WALL_H, SAG = VIL ? 0.1 : 0.2;
+      const cols = PAPER ? ['#e9b8aa', '#ecc768', '#b8c7b0', '#d9cfe0', '#e38f80', '#faf6ed'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
+      const G1 = PAPER ? '#8bb087' : '#3e9a55', G2 = PAPER ? '#a9c3a0' : '#5bb86d', BOW = PAPER ? '#e38f80' : '#e8413a', KNOT = PAPER ? '#ecc768' : '#ffd23f';
+      const pen = 'rgba(112,88,74,.7)';
       const run = (len, at, seed) => {
         const pts = [];
         for (let u = 0.15; u <= len - 0.1; u += 0.12) pts.push([u, TOP - 0.18 - Math.sin(((u - 0.15) % 1.2) / 1.2 * Math.PI) * SAG]);
         // fluffy green garland
         for (const [u, z] of pts) {
           const q = at(u, z);
-          c.fillStyle = '#3e9a55'; c.beginPath(); c.arc(q.x, q.y, 3.4, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#5bb86d'; c.beginPath(); c.arc(q.x - 1, q.y - 1.2, 2, 0, Math.PI * 2); c.fill();
+          c.fillStyle = G1; c.beginPath(); c.arc(q.x, q.y, 3.4, 0, Math.PI * 2); c.fill();
+          c.fillStyle = G2; c.beginPath(); c.arc(q.x - 1, q.y - 1.2, 2, 0, Math.PI * 2); c.fill();
         }
         // red bows where the garland is pinned up
         for (let u = 0.15; u <= len - 0.1; u += 1.2) {
           const q = at(u, TOP - 0.16);
-          c.fillStyle = '#e8413a';
+          c.fillStyle = BOW;
           c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - 5, q.y - 3); c.lineTo(q.x - 5, q.y + 3); c.closePath(); c.fill();
           c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x + 5, q.y - 3); c.lineTo(q.x + 5, q.y + 3); c.closePath(); c.fill();
           c.beginPath(); c.moveTo(q.x - 1, q.y); c.lineTo(q.x - 3, q.y + 7); c.lineTo(q.x + 1, q.y + 6); c.fill();
-          c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(q.x, q.y, 1.5, 0, Math.PI * 2); c.fill();
+          c.fillStyle = KNOT; c.beginPath(); c.arc(q.x, q.y, 1.5, 0, Math.PI * 2); c.fill();
+          if (PAPER) { c.strokeStyle = pen; c.lineWidth = 0.6; c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - 5, q.y - 3); c.lineTo(q.x - 5, q.y + 3); c.closePath(); c.moveTo(q.x, q.y); c.lineTo(q.x + 5, q.y - 3); c.lineTo(q.x + 5, q.y + 3); c.closePath(); c.stroke(); }
         }
         // big glowing bulbs
         pts.forEach(([u, z], i) => {
@@ -2315,9 +2319,10 @@
           const q = at(u, z - 0.06);
           const col = cols[(i / 2 + seed) % cols.length];
           const on = Math.sin(t * 2.6 + i * 0.7) > -0.35;
-          if (on) { c.globalAlpha = 0.3; c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y + 2, 6, 0, Math.PI * 2); c.fill(); }
+          if (on) { c.globalAlpha = PAPER ? 0.22 : 0.3; c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y + 2, 6, 0, Math.PI * 2); c.fill(); }
           c.globalAlpha = on ? 1 : 0.35;
           c.fillStyle = col; c.beginPath(); c.ellipse(q.x, q.y + 2, 2.1, 2.9, 0, 0, Math.PI * 2); c.fill();
+          if (PAPER) { c.strokeStyle = pen; c.lineWidth = 0.6; c.stroke(); }
           c.globalAlpha = 1;
         });
       };
@@ -2327,7 +2332,7 @@
       const wreath = (dir, a, z, r) => this.onWall(dir, a, z, (cc) => {
         for (let k = 0; k < 16; k++) {
           const ang = (k / 16) * Math.PI * 2;
-          cc.fillStyle = k % 2 ? '#2f8a45' : '#4fb565';
+          cc.fillStyle = PAPER ? (k % 2 ? '#7fa67c' : '#9cbc95') : (k % 2 ? '#2f8a45' : '#4fb565');
           cc.beginPath(); cc.arc(Math.cos(ang) * r, Math.sin(ang) * r, r * 0.45, 0, Math.PI * 2); cc.fill();
         }
         for (let k = 0; k < 6; k++) {
@@ -2335,13 +2340,25 @@
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.arc(Math.cos(ang) * r, Math.sin(ang) * r, r * 0.2, 0, Math.PI * 2); cc.fill();
         }
-        cc.fillStyle = '#e8413a';
+        if (PAPER) {
+          // pen outline inside and out, then cream berries' shine
+          cc.strokeStyle = pen; cc.lineWidth = 0.8;
+          cc.beginPath(); cc.arc(0, 0, r * 1.45, 0, Math.PI * 2); cc.stroke();
+          cc.beginPath(); cc.arc(0, 0, r * 0.55, 0, Math.PI * 2); cc.stroke();
+        }
+        cc.fillStyle = BOW;
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(-r * 0.7, r * 0.5); cc.lineTo(-r * 0.7, r * 1.4); cc.closePath(); cc.fill();
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(r * 0.7, r * 0.5); cc.lineTo(r * 0.7, r * 1.4); cc.closePath(); cc.fill();
+        if (PAPER) {
+          cc.strokeStyle = pen; cc.lineWidth = 0.7;
+          cc.beginPath(); cc.moveTo(0, r); cc.lineTo(-r * 0.7, r * 0.5); cc.lineTo(-r * 0.7, r * 1.4); cc.closePath(); cc.moveTo(0, r); cc.lineTo(r * 0.7, r * 0.5); cc.lineTo(r * 0.7, r * 1.4); cc.closePath(); cc.stroke();
+          cc.fillStyle = KNOT; cc.beginPath(); cc.arc(0, r, r * 0.18, 0, Math.PI * 2); cc.fill();
+        }
       });
       wreath('x0', this.plan.door.y, PAPER ? 1.6 : VIL ? 1.25 : 1.3, 7);
       for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, VIL ? 0.5 : 1.45, 6);
       wreath('x0', PAPER ? 3.2 : 3.5, PAPER ? 0.8 : VIL ? 0.5 : 1.5, 7);
+      if (PAPER) for (const u of [4.45, 9.2]) wreath('y0', u, 0.85, 6.5); // between the framed paintings
       // MERRY XMAS banner of little flags on the left wall
       const word = 'MERRY XMAS';
       const y0 = 5.6, step = 0.32;
@@ -2351,7 +2368,8 @@
         this.onWall('x0', yy, zz, (cc) => {
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
-          cc.fillStyle = '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
+          if (PAPER) { cc.strokeStyle = pen; cc.lineWidth = 0.6; cc.stroke(); }
+          cc.fillStyle = PAPER ? '#70584a' : '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
           cc.fillText(word[k], 0, -1.5);
         });
       }
@@ -2376,12 +2394,12 @@
       if (XMAS) {
         // poinsettia: red star bracts with a gold middle
         for (const [ox, oy] of [[0, -24], [-7, -17], [7, -18]]) {
-          c.fillStyle = '#e02b3a';
+          c.fillStyle = this.plan && this.plan.paper ? '#e38f80' : '#e02b3a';
           for (let i = 0; i < 6; i++) {
             const a = (i / 6) * Math.PI * 2 + sway;
             c.beginPath(); c.ellipse(b.x + ox + Math.cos(a) * 3.5, b.y + oy + Math.sin(a) * 2.2, 3.6, 1.6, a, 0, Math.PI * 2); c.fill();
           }
-          c.fillStyle = '#ffd34d'; c.beginPath(); c.arc(b.x + ox, b.y + oy, 1.4, 0, Math.PI * 2); c.fill();
+          c.fillStyle = this.plan && this.plan.paper ? '#ecc768' : '#ffd34d'; c.beginPath(); c.arc(b.x + ox, b.y + oy, 1.4, 0, Math.PI * 2); c.fill();
         }
       }
     }
