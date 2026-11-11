@@ -1280,7 +1280,7 @@
       const P = (x, y, z) => this.iso(x, y, z);
       const sil = [P(0, D, WH), P(0, 0, WH), P(W, 0, WH), P(W, 0, -0.28), P(W, D, -0.28), P(0, D, -0.28)];
       // edges with how far out the band goes (back edges wider)
-      const edges = [[0, 1, 45, 3.5], [1, 2, 45, 3.5], [2, 3, 45, 0.75], [3, 4, 45, 0.75], [4, 5, 45, 0.75], [5, 0, 45, 0.75]]; // 70% behind the back walls
+      const edges = [[0, 1, 65, 3.5], [1, 2, 65, 3.5], [2, 3, 55, 0.75], [3, 4, 45, 0.75], [4, 5, 45, 0.75], [5, 0, 55, 0.75]]; // 70% behind the back walls
       const inside = (x, y) => { let r = false; for (let i = 0, j = sil.length - 1; i < sil.length; j = i++) { const a = sil[i], b = sil[j]; if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) r = !r; } return r; };
       const dist = (x, y) => {
         let best = Infinity;
@@ -1288,7 +1288,7 @@
         return best;
       };
       const small = this.cw < 520;
-      const N = small ? 10 : 24;
+      const N = small ? 24 : 60;
       const now = this.t / 1000, dt = Math.min(0.1, Math.max(0, now - (this.snowT || now))); this.snowT = now;
       const totalW = edges.reduce((s2, e) => s2 + e[3], 0);
       const spawn = (fresh) => {
@@ -1300,23 +1300,23 @@
         let ux = nx / nl, uy = ny / nl;
         if (((a.x + b.x) / 2 - cx) * ux + ((a.y + b.y) / 2 - cy) * uy < 0) { ux = -ux; uy = -uy; }
         const off = 10 + Math.random() * (e[2] - 10);
-        const x = a.x + (b.x - a.x) * k + ux * off, y = a.y + (b.y - a.y) * k + uy * off - (fresh ? 0 : 30 + Math.random() * 30);
-        return { x0: x, y, r: 1 + Math.random() * 0.5, a: 0.35 + Math.random() * 0.2, vy: 8 + Math.random() * 8, amp: 2 + Math.random() * 3, per: 3 + Math.random() * 3, ph: Math.random() * 6.3, born: now, dying: 0 };
+        const x = a.x + (b.x - a.x) * k + ux * off, y = a.y + (b.y - a.y) * k + uy * off - (fresh ? 0 : Math.random() * 20);
+        return { x0: x, y, r: 1.6 + Math.random() * 1.0, a: 0.7 + Math.random() * 0.25, vy: 8 + Math.random() * 8, amp: 2 + Math.random() * 3, per: 3 + Math.random() * 3, ph: Math.random() * 6.3, born: now, dying: 0 };
       };
       if (!this.snow || this.snowN !== N) { this.snow = Array.from({ length: N }, () => spawn(true)); this.snowN = N; }
       const c = this.ctx;
       c.save();
-      c.fillStyle = '#fff9ef';
+      c.fillStyle = '#ffffff'; c.shadowColor = 'rgba(120,140,170,.55)'; c.shadowBlur = 2;
       for (let i = 0; i < this.snow.length; i++) {
         const f = this.snow[i];
         f.y += f.vy * dt;
         const x = f.x0 + Math.sin(now * Math.PI * 2 / f.per + f.ph) * f.amp;
         const d = dist(x, f.y), out = !inside(x, f.y);
-        if (!f.dying && (!out || d < 8 || d > 47)) f.dying = now;
+        if (!f.dying && (!out || d < 8 || d > 68)) f.dying = now;
         let alpha = f.a * Math.min(1, (now - f.born) / 0.8);
         if (f.dying) { alpha *= Math.max(0, 1 - (now - f.dying) / 1.0); if (now - f.dying > 1.0) { this.snow[i] = spawn(false); continue; } }
         if (!out) continue;
-        c.globalAlpha = Math.min(0.55, alpha);
+        c.globalAlpha = Math.min(0.95, alpha);
         c.beginPath(); c.arc(x, f.y, f.r, 0, Math.PI * 2); c.fill();
       }
       c.restore();
@@ -3899,20 +3899,20 @@
       const [icon, text] = list[Math.floor((p.capSeed || 0) * list.length) % list.length];
       const c = this.ctx;
       c.save();
-      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.62;
+      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.88;
       c.textBaseline = 'middle';
       c.font = '600 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
       const ICON = 12, tw = c.measureText(text).width;
       const w = 6 + ICON + 3 + tw + 7, h = 15, x0 = x - w / 2, yy = y - 7 - Math.abs(Math.sin(t * 1.6 + p.phase)) * 1;
       this.roundRect(x0, yy - h / 2, w, h, 7.5, 'rgba(255,250,244,.9)', null);
-      c.strokeStyle = 'rgba(107,74,58,.22)'; c.lineWidth = 0.8; c.stroke();
+      c.strokeStyle = 'rgba(107,74,58,.32)'; c.lineWidth = 0.8; c.stroke();
       const ic = emojiIcon(icon);
       if (ic) {
         const k = 10.5 / Math.max(ic.w, ic.h), iw = ic.w * k, ih = ic.h * k;
         c.drawImage(ic.cv, ic.x, ic.y, ic.w, ic.h, x0 + 6 + (ICON - iw) / 2, yy - ih / 2, iw, ih);
       }
       c.textAlign = 'left';
-      c.fillStyle = '#8f7a6d';
+      c.fillStyle = '#7a6356';
       c.fillText(text, x0 + 6 + ICON + 3, yy + 0.5);
       c.restore();
       return yy - h / 2 - 2;
