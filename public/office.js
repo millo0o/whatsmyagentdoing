@@ -1217,14 +1217,10 @@
       let tree = null;
       if (XMAS) {
         tree = { x: tx, y: ty };
-        add(tx + ty + 0.3, () => this.photoTree(tx, ty));
+        add(tx + ty + 0.3, () => this.gptTree(tx, ty));
         poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
         poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
         poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
-        add(6.6 + ty - 1.0, () => this.snowman(6.6, ty - 1.0, 'santa'));
-        add(10.2 + ty + 1.0, () => this.snowman(10.2, ty + 1.0, 'top'));
-        solid(6.35, ty - 1.25, 0.5, 0.5);
-        solid(9.95, ty + 0.75, 0.5, 0.5);
       } else {
         add(tx + ty, () => this.plant(tx, ty));
       }
@@ -1833,7 +1829,7 @@
 
     drawRoom() {
       if (BARE) return;
-      if (this.plan.paper) { this.paperRoom(); if (XMAS) { this.photoWalls(); this.xmasBunting(); } return; }
+      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.gptWalls(); return; }
       if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
@@ -3120,6 +3116,163 @@
       for (const u of [4.45, 9.2]) wreath('y0', u, 0.78, 7.5);
     }
 
+    // ---- Christmas, "paper picture-book" (designed by GPT, see the spec in
+    // the commit): a wide, simple five-tier tree in matte green, a few flat red
+    // baubles, three butter paper stars, 16 small lights, a red star on top;
+    // a light rope garland with leaf clusters and red bows, one door wreath.
+    // All sizes are screen pixels at zoom 1, in a 175×190 box around the tree.
+
+    gptTree(x, y) {
+      const c = this.ctx, F = this.iso(x, y, 0);
+      const ox = F.x - 87.5, oy = F.y - 176;
+      const X = (v) => ox + v, Y = (v) => oy + v;
+      const INK = '#70584a';
+      c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+      // trunk (behind the leaves)
+      c.fillStyle = '#95765b'; c.fillRect(X(82.5), Y(153), 10, 15);
+      // tiers, bottom first: [top y, bottom y, max width]
+      const tiers = [[19, 55, 43], [39, 80, 73], [61, 105, 105], [85, 131, 138], [109, 158, 170]];
+      const blotch = [[-0.18, 0.45], [-0.2, 0.5], [-0.22, 0.48], [-0.2, 0.5], [-0.22, 0.52]];
+      for (let i = tiers.length - 1; i >= 0; i--) {
+        const [y0, y1, w] = tiers[i], cx = 87.5, L = cx - w / 2, R = cx + w / 2, h = y1 - y0;
+        const sides = () => {
+          c.moveTo(L + 3, y1 + 0.5);
+          c.quadraticCurveTo(L - 0.5, y1 - 0.5, L + 1.5, y1 - 3);
+          c.quadraticCurveTo(cx - w * 0.3 - 3, y0 + h * 0.45, cx - 3, y0 + 3);
+          c.quadraticCurveTo(cx, y0 - 1, cx + 3, y0 + 3);
+          c.quadraticCurveTo(cx + w * 0.3 + 3, y0 + h * 0.45, R - 1.5, y1 - 3);
+          c.quadraticCurveTo(R + 0.5, y1 - 0.5, R - 3, y1 + 0.5);
+        };
+        const bottom = () => { c.quadraticCurveTo(cx, y1 + 5, L + 3, y1 + 0.5); };
+        c.save(); c.translate(ox, oy);
+        c.beginPath(); sides(); bottom(); c.closePath();
+        c.fillStyle = '#526f58'; c.fill();
+        c.save(); c.clip();
+        c.globalAlpha = 0.06; c.fillStyle = '#819474';
+        c.beginPath(); c.ellipse(cx + blotch[i][0] * w, y0 + h * blotch[i][1], w * 0.2, h * 0.28, -0.4, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 0.08; c.fillStyle = '#405b49';
+        c.beginPath(); c.ellipse(cx + w * 0.3, y1 - h * 0.14, w * 0.18, h * 0.16, 0, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 0.045; c.fillStyle = '#2f3f33';
+        for (let k = 0; k < w * h / 100; k++) { const v1 = Math.sin((i * 997 + k) * 12.9898) * 43758.5453, v2 = Math.sin((i * 997 + k) * 78.233) * 43758.5453; c.beginPath(); c.arc(L + (v1 - Math.floor(v1)) * w, y0 + (v2 - Math.floor(v2)) * h, 0.3, 0, Math.PI * 2); c.fill(); }
+        c.globalAlpha = 1;
+        c.restore();
+        c.strokeStyle = INK; c.lineWidth = 1.1;
+        c.beginPath(); sides(); c.stroke();
+        // bottom edge: silhouette at the ends, a faint seam in the middle 60%
+        const bez = (u) => { const a = R - 3, b = L + 3, yy = y1 + 0.5; return { x: (1 - u) * (1 - u) * a + 2 * (1 - u) * u * cx + u * u * b, y: (1 - u) * (1 - u) * yy + 2 * (1 - u) * u * (y1 + 5) + u * u * yy }; };
+        const seg = (u0, u1, lw, alpha) => { c.globalAlpha = alpha; c.lineWidth = lw; c.beginPath(); for (let u = u0; u <= u1 + 1e-6; u += 0.05) { const q = bez(u); u === u0 ? c.moveTo(q.x, q.y) : c.lineTo(q.x, q.y); } c.stroke(); c.globalAlpha = 1; };
+        if (i === tiers.length - 1) seg(0, 1, 1.1, 1);
+        else { seg(0, 0.2, 1.1, 1); seg(0.2, 0.8, 0.7, 0.45); seg(0.8, 1, 1.1, 1); }
+        c.restore();
+      }
+      // pot
+      const pt = Y(163), pb = Y(183), cxp = X(87.5);
+      c.beginPath(); c.moveTo(cxp - 16.5, pt + 2.5); c.lineTo(cxp - 13.5, pb); c.lineTo(cxp + 13.5, pb); c.lineTo(cxp + 16.5, pt + 2.5); c.closePath();
+      c.fillStyle = '#e8d8c3'; c.fill();
+      c.beginPath(); c.moveTo(cxp + 4, pt + 2.5); c.lineTo(cxp + 4, pb); c.lineTo(cxp + 13.5, pb); c.lineTo(cxp + 16.5, pt + 2.5); c.closePath();
+      c.fillStyle = '#c9b69c'; c.fill();
+      c.beginPath(); c.moveTo(cxp - 16.5, pt + 2.5); c.lineTo(cxp - 13.5, pb); c.lineTo(cxp + 13.5, pb); c.lineTo(cxp + 16.5, pt + 2.5); c.strokeStyle = INK; c.lineWidth = 0.8; c.stroke();
+      c.beginPath(); c.ellipse(cxp, pt + 2.5, 16.5, 2.5, 0, 0, Math.PI * 2); c.fillStyle = '#e8d8c3'; c.fill(); c.stroke();
+      // flat red baubles with a short hanging line
+      const balls = [[82, 43, 7], [105, 65, 7], [65, 83, 7], [92, 97, 8], [124, 112, 8], [48, 123, 8], [76, 140, 9], [111, 145, 9], [151, 145, 9]];
+      for (const [bx, by, d] of balls) {
+        c.strokeStyle = INK; c.lineWidth = 0.7; c.beginPath(); c.moveTo(X(bx), Y(by) - d / 2 - 2); c.lineTo(X(bx), Y(by) - d / 2); c.stroke();
+        c.fillStyle = '#b96355'; c.beginPath(); c.arc(X(bx), Y(by), d / 2, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 0.65; c.lineWidth = 0.65; c.stroke(); c.globalAlpha = 1;
+      }
+      // butter paper stars
+      const star = (sx, sy, r, inner) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? r * inner : r; c.lineTo(sx + Math.cos(a) * q, sy + Math.sin(a) * q); } c.closePath(); };
+      c.fillStyle = '#e6c779';
+      for (const [sx, sy] of [[80, 68], [111, 91], [96, 123]]) { star(X(sx), Y(sy), 3.2, 0.5); c.fill(); }
+      // 16 small lights, no glow
+      c.globalAlpha = 0.95; c.fillStyle = '#f5e3aa';
+      for (const [lx, ly] of [[81, 31], [93, 39], [100, 49], [65, 63], [74, 74], [93, 79], [113, 77], [49, 98], [65, 109], [85, 114], [134, 119], [30, 135], [48, 143], [90, 149], [131, 146], [154, 137]]) {
+        c.beginPath(); c.arc(X(lx), Y(ly), 1.2, 0, Math.PI * 2); c.fill();
+      }
+      c.globalAlpha = 1;
+      // red star topper
+      const tx = X(87.5), ty = Y(10.5);
+      star(tx, ty, 9.5, 0.47); c.fillStyle = '#b96355'; c.fill(); c.strokeStyle = '#806b59'; c.lineWidth = 1; c.stroke();
+      // three presents, low by the pot
+      const gift = (gcx, gbot, gw, gh, box, rib) => {
+        const s = gw / 64, h = (gh - s * 32) / 32;
+        const dx = gcx - 87.5, dy = gbot - 176;
+        const ux = (dx / 32 + dy / 16) / 2, uy = (dy / 16 - dx / 32) / 2;
+        const gx = x + ux - s, gy = y + uy - s;
+        this.box(gx, gy, 0, s, s, h, box, box, box);
+        const P = (a, b, cc) => this.iso(a, b, cc);
+        c.globalAlpha = 0.08; c.fillStyle = INK; c.beginPath(); [P(gx + s, gy, 0), P(gx + s, gy + s, 0), P(gx + s, gy + s, h), P(gx + s, gy, h)].forEach((q, k) => (k ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); c.fill(); c.globalAlpha = 1;
+        c.strokeStyle = rib; c.lineWidth = 2;
+        const a0 = P(gx + s / 2, gy, h), a1 = P(gx + s / 2, gy + s, h), a2 = P(gx + s / 2, gy + s, 0);
+        c.beginPath(); c.moveTo(a0.x, a0.y); c.lineTo(a1.x, a1.y); c.lineTo(a2.x, a2.y); c.stroke();
+        const b0 = P(gx, gy + s / 2, h), b1 = P(gx + s, gy + s / 2, h), b2 = P(gx + s, gy + s / 2, 0);
+        c.beginPath(); c.moveTo(b0.x, b0.y); c.lineTo(b1.x, b1.y); c.lineTo(b2.x, b2.y); c.stroke();
+        const top = P(gx + s / 2, gy + s / 2, h);
+        c.fillStyle = rib; c.strokeStyle = INK; c.lineWidth = 0.5;
+        for (const d of [-1, 1]) { c.beginPath(); c.ellipse(top.x + d * 1.7, top.y - 1.2, 1.5, 1, d * 0.5, 0, Math.PI * 2); c.fill(); c.stroke(); }
+      };
+      gift(49, 181, 24, 19, 'rgba(185,99,85,1)', '#faf6ed');
+      gift(116, 186, 27, 21, 'rgba(232,216,195,1)', '#b96355');
+      gift(65, 190, 19, 15, 'rgba(250,246,237,1)', '#b96355');
+      c.restore();
+    }
+
+    // Cream mat under the tree (instead of a skirt).
+    gptMat(x, y) {
+      const c = this.ctx, F = this.iso(x, y, 0);
+      c.save(); c.globalAlpha = 0.45; c.fillStyle = '#e8d8c3';
+      c.beginPath(); c.ellipse(F.x, F.y, 56, 12, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    }
+
+    // A light rope garland on the walls: leaf clusters at the pins, a red bow at
+    // every second pin; one wreath on the door.
+    gptWalls() {
+      const { W, D } = this.plan, WH = this.plan.WH, dy = this.plan.door.y;
+      const c = this.ctx, P = (a, b, cc) => this.iso(a, b, cc);
+      const INK = '#70584a';
+      const PX = Math.hypot(TW / 2, TH / 2);            // screen px per tile along a wall
+      const zPin = WH - 4 / TH, sag = 6.5 / TH;
+      let pinNo = 0;
+      const bow = (q) => {
+        c.fillStyle = '#b96355'; c.strokeStyle = INK; c.lineWidth = 0.5;
+        for (const d of [-1, 1]) { c.beginPath(); c.ellipse(q.x + d * 2.4, q.y, 2.5, 1.5, d * 0.3, 0, Math.PI * 2); c.fill(); c.stroke(); }
+        c.strokeStyle = '#b96355'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(q.x - 0.5, q.y + 0.8); c.lineTo(q.x - 1.4, q.y + 2.8); c.moveTo(q.x + 0.5, q.y + 0.8); c.lineTo(q.x + 1.4, q.y + 2.8); c.stroke();
+        c.fillStyle = '#b96355'; c.strokeStyle = INK; c.lineWidth = 0.5; c.beginPath(); c.arc(q.x, q.y, 1, 0, Math.PI * 2); c.fill(); c.stroke();
+      };
+      const leaves = (q) => {
+        for (const [ang, col] of [[-2.4, '#526f58'], [-0.7, '#819474'], [1.6, '#526f58']]) {
+          c.save(); c.translate(q.x + Math.cos(ang) * 2.4, q.y + Math.sin(ang) * 1.6); c.rotate(ang);
+          c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, 2.5, 1.25, 0, 0, Math.PI * 2); c.fill(); c.restore();
+        }
+      };
+      const run = (u0, u1, at) => {
+        const inset = 12 / PX, a = u0 + inset, b = u1 - inset;
+        if (b - a < 0.5) return;
+        const n = Math.max(1, Math.round(((b - a) * PX) / 76));
+        const pins = Array.from({ length: n + 1 }, (_, k) => a + (b - a) * k / n);
+        c.strokeStyle = '#819474'; c.lineWidth = 1.2; c.lineCap = 'round';
+        for (let k = 0; k < n; k++) {
+          c.beginPath();
+          for (let s = 0; s <= 1.0001; s += 0.05) { const u = pins[k] + (pins[k + 1] - pins[k]) * s, q = at(u, zPin - Math.sin(s * Math.PI) * sag); s === 0 ? c.moveTo(q.x, q.y) : c.lineTo(q.x, q.y); }
+          c.stroke();
+        }
+        for (const u of pins) { const q = at(u, zPin); leaves(q); if (pinNo++ % 2 === 0) bow({ x: q.x, y: q.y + 4.5 }); }
+      };
+      run(0, W, (u, z) => P(u, 0, z));
+      run(0, dy - 0.62, (u, z) => P(0, u, z));
+      run(dy + 0.62, D, (u, z) => P(0, u, z));
+      // door wreath
+      const q = P(0, dy, 1.5);
+      c.strokeStyle = '#526f58'; c.lineWidth = 3; c.beginPath(); c.arc(q.x, q.y, 7.5, 0, Math.PI * 2); c.stroke();
+      for (let k = 0; k < 8; k++) {
+        const ang = k / 8 * Math.PI * 2;
+        c.save(); c.translate(q.x + Math.cos(ang) * 8.2, q.y + Math.sin(ang) * 8.2); c.rotate(ang + Math.PI / 2);
+        c.fillStyle = k % 2 ? '#819474' : '#526f58'; c.beginPath(); c.ellipse(0, 0, 2, 1, 0, 0, Math.PI * 2); c.fill(); c.restore();
+      }
+      bow({ x: q.x, y: q.y + 8 });
+    }
+
     // Claw machine full of plushies.
     clawMachine(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc), c = this.ctx, t = this.t / 1000;
@@ -3178,6 +3331,7 @@
     treeSkirt(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const ring = (r) => Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * Math.PI * 2; return P(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.01); });
+      if (this.plan && this.plan.paper) return this.gptMat(x, y);
       if (this.plan && this.plan.paper) {
         this.poly(ring(1.5), 'rgba(214,69,65,1)', 'rgba(112,88,74,.6)', 1);
         this.poly(ring(1.32), 'rgba(255,248,234,1)', 'rgba(112,88,74,.35)', 0.8);
