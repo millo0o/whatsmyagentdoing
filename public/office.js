@@ -58,7 +58,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', cake: '🍰', review: '🔍', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
+    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', cake: '🍰', review: '🔍', claw: '🧸', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
   };
 
   // What everyone is up to, shown as a little caption ("🎮 게임 중").
@@ -72,6 +72,7 @@
     couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
     beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
     window: WINTER ? [['❄️', '눈 구경 중'], ['⛰️', '경치 구경 중']] : [['⛰️', '경치 구경 중'], ['☁️', '구름 구경 중'], ['🌤️', '날씨 구경 중']],
+    claw: [['🧸', '인형 뽑는 중'], ['🧸', '한 판만 더'], ['😤', '집게 탓하는 중']],
     review: [['🔍', '검토 중'], ['📝', '리뷰 쓰는 중'], ['✅', '결과 확인 중'], ['🖍️', '빨간펜 드는 중']],
     cake: [['🍰', '케이크 고르는 중'], ['🍓', '딸기 케이크 먹는 중'], ['🧁', '컵케이크 먹는 중']],
     weed: [['🌿', '풀 뽑는 중'], ['💰', '근로 중'], ['🌿', '제초 알바 중'], ['💦', '땀 흘리며 일하는 중']],
@@ -1136,7 +1137,7 @@
       const islands = rows * 4;
       const workBottom = 1.4 + (rows - 1) * 3.3 + 2.6;
       const A = workBottom + 1.7;            // the aisle ends, the front zones start
-      const W = 17.2, D = A + 4.6;
+      const W = 17.2, D = A + 7.4;
       const grid = new Grid(W, D);
       const items = [], pois = [], desks = [], props = [], washes = [];
       const add = (depth, draw) => items.push({ depth, draw });
@@ -1216,7 +1217,7 @@
       let tree = null;
       if (XMAS) {
         tree = { x: tx, y: ty };
-        add(tx + ty + 0.3, () => this.xmasTree(tx, ty));
+        add(tx + ty + 0.3, () => this.paperTree(tx, ty));
         poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
         poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
         poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
@@ -1228,6 +1229,29 @@
         add(tx + ty, () => this.plant(tx, ty));
       }
       solid(tx - 1.0, ty - 1.0, 2.0, 2.0, 0.05);
+
+      // ---- game corner along the front: ping-pong, foosball, arcades, claw machine
+      const G = A + 4.6;
+      washes.push({ x: 9.5, y: G + 1.4, rx: 6.0, ry: 1.7, col: 'rgba(231,198,107,.14)' });
+      const px = 4.6, py = G + 0.5;
+      add(px + 1.3 + py + 0.7, () => this.pingpong(px, py));
+      solid(px, py, 2.6, 1.4, 0.05);
+      poi(px - 0.5, py + 0.7, 'pingpong', 'side', { pair: 'pp' });
+      poi(px + 3.1, py + 0.7, 'pingpong', 'side', { pair: 'pp' });
+      const pp = { x0: px - 0.2, x1: px + 2.8, y: py + 0.7 };
+      const fbx = 9.6, fby = G + 1.0;
+      add(fbx + 0.8 + fby + 0.4, () => this.foosball(fbx, fby));
+      solid(fbx, fby, 1.6, 0.8, 0.05);
+      poi(fbx - 0.45, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
+      poi(fbx + 2.05, fby + 0.4, 'foosball', 'side', { pair: 'fb' });
+      for (const ax of [13.0, 13.9]) {
+        add(ax + 0.35 + G + 0.35, () => this.arcade(ax, G));
+        solid(ax, G, 0.7, 0.7);
+        poi(ax + 0.35, G + 1.15, 'arcade', 'back');
+      }
+      add(15.4 + 0.4 + G + 0.4, () => this.clawMachine(15.4, G));
+      solid(15.4, G, 0.8, 0.8);
+      poi(15.8, G + 1.25, 'claw', 'back', { w: 1.5 });
 
       // ---- bungeoppang cart by the door in winter
       const door = { x: 0.4, y: D - 1.1 };
@@ -1243,7 +1267,7 @@
       return {
         W, D, OW: W, OD: workBottom, MR: 0, PY: A, RW: 0, GX: W, pods: rows === 1 ? 2 : islands / 2 + 1,
         tree, washes, board, village: true, paper: true, WH: 1.25,
-        grid, items, props, pois, desks, windows: [], posters: [], pp: { x0: 0, x1: 0, y: 0 }, door,
+        grid, items, props, pois, desks, windows: [], posters: [], pp, door,
       };
     }
 
@@ -2384,8 +2408,10 @@
     }
 
     pingpong(x, y) {
-      for (const [lx, ly] of [[0.1, 0.1], [2.4, 0.1], [0.1, 1.2], [2.4, 1.2]]) this.box(x + lx, y + ly, 0, 0.08, 0.08, 0.7, '#333', '#333', '#222');
-      this.box(x, y, 0.7, 2.6, 1.4, 0.06, '#2f7a52', '#245f40', '#1d4f35');
+      const paper = this.plan && this.plan.paper;
+      for (const [lx, ly] of [[0.1, 0.1], [2.4, 0.1], [0.1, 1.2], [2.4, 1.2]]) this.box(x + lx, y + ly, 0, 0.08, 0.08, 0.7, paper ? '#c9b396' : '#333', paper ? '#c9b396' : '#333', paper ? '#b8a284' : '#222');
+      if (paper) this.box(x, y, 0.7, 2.6, 1.4, 0.06, '#9fb8a8', '#87a191', '#77917f');
+      else this.box(x, y, 0.7, 2.6, 1.4, 0.06, '#2f7a52', '#245f40', '#1d4f35');
       const P = (a, b, c) => this.iso(a, b, c);
       this.poly([P(x + 0.04, y + 0.69, 0.765), P(x + 2.56, y + 0.69, 0.765), P(x + 2.56, y + 0.71, 0.765), P(x + 0.04, y + 0.71, 0.765)], '#ffffff');
       this.poly([P(x + 1.3, y - 0.05, 0.76), P(x + 1.3, y + 1.45, 0.76), P(x + 1.3, y + 1.45, 0.95), P(x + 1.3, y - 0.05, 0.95)], 'rgba(255,255,255,.55)', '#ddd');
@@ -2507,14 +2533,17 @@
     }
 
     arcade(x, y) {
-      this.box(x, y, 0, 0.7, 0.7, 1.75, '#3a2a6a', '#2b1f52', '#221843');
+      const paper = this.plan && this.plan.paper, alt = paper && x % 2 > 1;
+      if (paper) this.box(x, y, 0, 0.7, 0.7, 1.75, alt ? '#d9cfe0' : '#b8c7b0', alt ? '#c9bcd6' : '#a3b69b', alt ? '#b8aac8' : '#93a68b');
+      else this.box(x, y, 0, 0.7, 0.7, 1.75, '#3a2a6a', '#2b1f52', '#221843');
       const P = (a, b, c) => this.iso(a, b, c);
       const hue = (this.t / 20) % 360;
-      this.poly([P(x + 0.1, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.45), P(x + 0.1, y + 0.7, 1.45)], `hsl(${hue},70%,55%)`);
+      this.poly([P(x + 0.1, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.0), P(x + 0.6, y + 0.7, 1.45), P(x + 0.1, y + 0.7, 1.45)], (paper ? `hsl(${hue},45%,78%)` : `hsl(${hue},70%,55%)`));
       const blip = this.iso(x + 0.25 + 0.2 * Math.sin(this.t / 300), y + 0.7, 1.2);
       this.ctx.fillStyle = '#fff'; this.ctx.fillRect(blip.x, blip.y, 3, 3);
       this.poly([P(x, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.55), P(x + 0.7, y + 0.7, 1.72), P(x, y + 0.7, 1.72)], '#ffcf4a');
-      this.box(x, y + 0.7, 0.8, 0.7, 0.2, 0.08, '#4a3a8a', '#3a2a6a', '#2b1f52');
+      if (paper) this.box(x, y + 0.7, 0.8, 0.7, 0.2, 0.08, '#faf6ed', '#e8d8c3', '#d8c4ab');
+      else this.box(x, y + 0.7, 0.8, 0.7, 0.2, 0.08, '#4a3a8a', '#3a2a6a', '#2b1f52');
       const j = this.iso(x + 0.25, y + 0.8, 0.88);
       this.ctx.fillStyle = '#e04a4a'; this.ctx.beginPath(); this.ctx.arc(j.x, j.y - 3, 2.5, 0, Math.PI * 2); this.ctx.fill();
     }
@@ -2553,8 +2582,11 @@
     }
 
     foosball(x, y) {
-      for (const [lx, ly] of [[0.1, 0.1], [1.42, 0.1], [0.1, 0.62], [1.42, 0.62]]) this.box(x + lx, y + ly, 0, 0.08, 0.08, 0.6, '#5a4030', '#5a4030', '#4a3428');
-      this.box(x, y, 0.6, 1.6, 0.8, 0.25, '#2f8a4a', '#6e533b', '#5c4431');
+      const paper = this.plan && this.plan.paper;
+      const leg = paper ? '#c9b396' : '#5a4030';
+      for (const [lx, ly] of [[0.1, 0.1], [1.42, 0.1], [0.1, 0.62], [1.42, 0.62]]) this.box(x + lx, y + ly, 0, 0.08, 0.08, 0.6, leg, leg, leg);
+      if (paper) this.box(x, y, 0.6, 1.6, 0.8, 0.25, '#a9c3a0', '#e9b8aa', '#d9a596');
+      else this.box(x, y, 0.6, 1.6, 0.8, 0.25, '#2f8a4a', '#6e533b', '#5c4431');
       const P = (a, b, c) => this.iso(a, b, c);
       const players = this.plan && this.plan.pois.filter((q) => q.pair === 'fb' && q.taken).length === 2;
       for (let k = 0; k < 6; k++) {
@@ -2565,7 +2597,7 @@
         this.ctx.beginPath(); this.ctx.moveTo(a.x, a.y); this.ctx.lineTo(b.x, b.y); this.ctx.stroke();
         for (let m = 0; m < 2; m++) {
           const q = P(rx, y + 0.25 + m * 0.3 + shift, 0.82);
-          this.ctx.fillStyle = k % 2 ? '#c0392b' : '#2f6fb0';
+          this.ctx.fillStyle = paper ? (k % 2 ? '#e38f80' : '#9a8fc0') : (k % 2 ? '#c0392b' : '#2f6fb0');
           this.ctx.fillRect(q.x - 1.5, q.y - 3, 3, 6);
         }
       }
@@ -2738,6 +2770,134 @@
       gift(x - 1.1, y + 0.05, 0.32, '#2fa36b', '#ffd34d');
     }
 
+    // Christmas tree in the milk-tea paper style: soft sage tiers in brown pen
+    // with watercolour blooms, cream bead garlands, coral/mustard/lavender
+    // baubles, little coral bows, warm fairy lights and a paper star.
+    paperTree(x, y) {
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const c = this.ctx, t = this.t / 1000;
+      const pen = 'rgba(112,88,74,.8)';
+      const rnd = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+      const gift = (gx, gy, s, col, rib) => {
+        const h = s * 0.8;
+        this.box(gx, gy, 0, s, s, h, this.shade(col, 14), col, this.shade(col, -14));
+        c.strokeStyle = rib; c.lineWidth = 1.6;
+        const a0 = P(gx + s / 2, gy, h), a1 = P(gx + s / 2, gy + s, h), a2 = P(gx + s / 2, gy + s, 0);
+        c.beginPath(); c.moveTo(a0.x, a0.y); c.lineTo(a1.x, a1.y); c.lineTo(a2.x, a2.y); c.stroke();
+        const b0 = P(gx, gy + s / 2, h), b1 = P(gx + s, gy + s / 2, h), b2 = P(gx + s, gy + s / 2, 0);
+        c.beginPath(); c.moveTo(b0.x, b0.y); c.lineTo(b1.x, b1.y); c.lineTo(b2.x, b2.y); c.stroke();
+        const top = P(gx + s / 2, gy + s / 2, h);
+        c.fillStyle = rib; c.beginPath(); c.ellipse(top.x - 3, top.y - 1.8, 3.2, 2, -0.5, 0, Math.PI * 2); c.ellipse(top.x + 3, top.y - 1.8, 3.2, 2, 0.5, 0, Math.PI * 2); c.fill();
+      };
+      const base = P(x, y, 0.4);
+      // soft warm halo
+      const gl = c.createRadialGradient(base.x, base.y - 85, 10, base.x, base.y - 85, 130);
+      gl.addColorStop(0, 'rgba(255,226,160,.30)'); gl.addColorStop(1, 'rgba(255,226,160,0)');
+      c.fillStyle = gl; c.beginPath(); c.arc(base.x, base.y - 85, 130, 0, Math.PI * 2); c.fill();
+      gift(x - 1.0, y - 0.7, 0.46, '#d9cfe0', '#e9b8aa');
+      gift(x + 0.3, y - 1.0, 0.4, '#b8c7b0', '#faf6ed');
+      // woven basket pot + trunk
+      this.box(x - 0.32, y - 0.32, 0, 0.64, 0.64, 0.34, '#e8d8c3', '#d8bd98', '#c9a983');
+      const bq = P(x, y + 0.32, 0.17);
+      c.strokeStyle = 'rgba(112,88,74,.35)'; c.lineWidth = 0.8;
+      for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(bq.x + k * 6 - 3, bq.y - 6 + k * 3); c.lineTo(bq.x + k * 6 + 3, bq.y + 4 + k * 3); c.stroke(); }
+      this.box(x - 0.09, y - 0.09, 0.34, 0.18, 0.18, 0.14, '#b08a68', '#9c7656', '#8a6648');
+      // tiers: two sage greens, scalloped hems, pen outline, watercolour blooms
+      const tiers = [[84, 46, 0], [72, 42, 30], [60, 38, 58], [48, 34, 84], [37, 30, 106], [26, 26, 126]];
+      const tri = [];
+      tiers.forEach(([hw, h, up], i) => {
+        const bx = base.x, by = base.y - up, top = by - h - 14;
+        tri.push({ bx, by, hw, top });
+        c.fillStyle = i % 2 ? '#9cbc95' : '#8bb087';
+        c.beginPath(); c.moveTo(bx - hw, by);
+        for (let k = 0; k <= 9; k++) { const px = bx - hw + (2 * hw) * k / 9; c.quadraticCurveTo(px - hw / 9, by + 7, px, by); }
+        c.lineTo(bx + 1.5, top + 2); c.quadraticCurveTo(bx, top - 1, bx - 1.5, top + 2); c.closePath(); c.fill();
+        c.strokeStyle = pen; c.lineWidth = 1.2; c.stroke();
+        // watercolour bloom: lighter patch on the left, a darker pool on the right
+        c.fillStyle = 'rgba(214,232,200,.45)';
+        c.beginPath(); c.ellipse(bx - hw * 0.35, by - h * 0.35, hw * 0.28, h * 0.32, -0.4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(96,130,96,.18)';
+        c.beginPath(); c.ellipse(bx + hw * 0.4, by - 6, hw * 0.3, 7, 0, 0, Math.PI * 2); c.fill();
+        // a few pen-drawn needle ticks
+        c.strokeStyle = 'rgba(80,110,80,.45)'; c.lineWidth = 0.8;
+        for (let k = 0; k < 5; k++) { const fx = bx - hw * 0.7 + rnd(i * 10 + k) * hw * 1.4, fy = by - 4 - rnd(i * 10 + k + 5) * h * 0.6; c.beginPath(); c.moveTo(fx - 2, fy - 2); c.lineTo(fx, fy); c.lineTo(fx + 2, fy - 2); c.stroke(); }
+      });
+      const at = (i, f, g) => { const q = tri[i]; const w = q.hw * (1 - g) * 0.9; return { x: q.bx - w + 2 * w * f, y: q.by - 4 - (q.by - q.top) * g * 0.85 }; };
+      // cream bead garlands
+      for (let i = 0; i < tri.length - 1; i++) {
+        const a = at(i, 0.04, 0.32), b = at(i, 0.96, 0.52), m = at(i, 0.5, 0.12);
+        for (let k = 0; k <= 16; k++) {
+          const u = k / 16, qx = (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * m.x + u * u * b.x, qy = (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * (m.y + 8) + u * u * b.y;
+          c.fillStyle = '#faf6ed'; c.beginPath(); c.arc(qx, qy, 1.7, 0, Math.PI * 2); c.fill();
+          c.strokeStyle = 'rgba(112,88,74,.35)'; c.lineWidth = 0.5; c.stroke();
+        }
+      }
+      // warm fairy lights
+      let n = 0;
+      for (let i = 0; i < tri.length; i++) {
+        for (let k = 0; k < 22 - i * 3; k++, n++) {
+          const q = at(i, rnd(n), rnd(n + 999) * 0.9);
+          const tw = 0.5 + 0.5 * Math.sin(t * (1.8 + rnd(n + 7) * 2.5) + n);
+          c.globalAlpha = 0.2 + 0.45 * tw; c.fillStyle = '#ffe7a3'; c.beginPath(); c.arc(q.x, q.y, 3, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 0.65 + 0.35 * tw; c.fillStyle = '#fffaf0'; c.beginPath(); c.arc(q.x, q.y, 1.1, 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.globalAlpha = 1;
+      // baubles in the palette, pen-outlined, with a paper shine
+      const bcol = ['#e9b8aa', '#e7c66b', '#d9cfe0', '#e38f80', '#faf6ed', '#e7c66b'];
+      n = 0;
+      for (let i = 0; i < tri.length; i++) {
+        const count = 6 - Math.floor(i / 1.5);
+        for (let k = 0; k < count; k++, n++) {
+          const q = at(i, (k + 0.5) / count + (rnd(n + 50) - 0.5) * 0.08, 0.1 + rnd(n + 77) * 0.35);
+          const r = 4.4 - i * 0.3;
+          c.fillStyle = bcol[n % bcol.length]; c.beginPath(); c.arc(q.x, q.y, r, 0, Math.PI * 2); c.fill();
+          c.strokeStyle = pen; c.lineWidth = 0.8; c.stroke();
+          c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.ellipse(q.x - r * 0.35, q.y - r * 0.4, r * 0.32, r * 0.2, -0.6, 0, Math.PI * 2); c.fill();
+        }
+      }
+      // small coral bows
+      const bow = (q, s) => {
+        c.fillStyle = '#e38f80'; c.strokeStyle = pen; c.lineWidth = 0.7;
+        c.beginPath(); c.moveTo(q.x, q.y); c.bezierCurveTo(q.x - 8 * s, q.y - 6 * s, q.x - 9 * s, q.y + 4 * s, q.x, q.y); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(q.x, q.y); c.bezierCurveTo(q.x + 8 * s, q.y - 6 * s, q.x + 9 * s, q.y + 4 * s, q.x, q.y); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(q.x - 1, q.y); c.lineTo(q.x - 4 * s, q.y + 9 * s); c.moveTo(q.x + 1, q.y); c.lineTo(q.x + 4 * s, q.y + 9 * s); c.strokeStyle = '#e38f80'; c.lineWidth = 1.6; c.stroke();
+      };
+      [[0, 0.22, 0.3], [0, 0.78, 0.25], [1, 0.5, 0.42], [2, 0.2, 0.3], [2, 0.8, 0.35], [3, 0.5, 0.32], [4, 0.3, 0.3]].forEach(([i, f, g]) => bow(at(i, f, g), 1 - i * 0.08));
+      // paper star: mustard, pen outline, a soft glow and slow twinkle
+      const TOP = 126 + 26 + 14, sx = base.x, sy = base.y - TOP - 6, r = 13 + Math.sin(t * 1.6) * 0.8;
+      const sg = c.createRadialGradient(sx, sy, 0, sx, sy, 28);
+      sg.addColorStop(0, 'rgba(255,226,150,.6)'); sg.addColorStop(1, 'rgba(255,226,150,0)');
+      c.fillStyle = sg; c.beginPath(); c.arc(sx, sy, 28, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ecc768'; c.beginPath();
+      for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.48 : r; c.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
+      c.closePath(); c.fill(); c.strokeStyle = pen; c.lineWidth = 1.3; c.lineJoin = 'round'; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(sx - 3, sy - 3, 3, 1.8, -0.6, 0, Math.PI * 2); c.fill();
+      // presents in front
+      gift(x + 0.45, y + 0.35, 0.48, '#e9b8aa', '#faf6ed');
+      gift(x - 0.6, y + 0.45, 0.42, '#b8c7b0', '#e38f80');
+      gift(x - 0.05, y + 0.75, 0.34, '#e7c66b', '#faf6ed');
+      gift(x + 0.95, y - 0.2, 0.36, '#faf6ed', '#e38f80');
+      gift(x - 1.1, y + 0.05, 0.32, '#d9cfe0', '#e7c66b');
+    }
+
+    // Claw machine full of plushies.
+    clawMachine(x, y) {
+      const P = (a, b, cc) => this.iso(a, b, cc), c = this.ctx, t = this.t / 1000;
+      this.box(x, y, 0, 0.8, 0.8, 0.8, '#e9b8aa', '#e9b8aa', '#d9a596');
+      // glass case with plushies
+      const pl = [['#faf6ed', 0.25, 0.3], ['#e7c66b', 0.55, 0.25], ['#d9cfe0', 0.4, 0.55], ['#b8c7b0', 0.65, 0.6]];
+      for (const [col, px, py] of pl) { const q = P(x + px, y + py, 0.85); c.fillStyle = col; c.strokeStyle = 'rgba(112,88,74,.6)'; c.lineWidth = 0.8; c.beginPath(); c.arc(q.x, q.y - 3, 4.5, 0, Math.PI * 2); c.fill(); c.stroke(); c.beginPath(); c.arc(q.x - 3, q.y - 7, 1.6, 0, Math.PI * 2); c.arc(q.x + 3, q.y - 7, 1.6, 0, Math.PI * 2); c.fill(); }
+      this.poly([P(x, y + 0.8, 0.8), P(x + 0.8, y + 0.8, 0.8), P(x + 0.8, y + 0.8, 1.6), P(x, y + 0.8, 1.6)], 'rgba(220,236,245,.35)', 'rgba(112,88,74,.6)', 0.9);
+      this.poly([P(x + 0.8, y, 0.8), P(x + 0.8, y + 0.8, 0.8), P(x + 0.8, y + 0.8, 1.6), P(x + 0.8, y, 1.6)], 'rgba(220,236,245,.3)', 'rgba(112,88,74,.6)', 0.9);
+      // the claw drifting back and forth
+      const cx = x + 0.4 + Math.sin(t * 0.8) * 0.25, top = P(cx, y + 0.4, 1.6), low = P(cx, y + 0.4, 1.25 + Math.abs(Math.sin(t * 0.5)) * 0.25);
+      c.strokeStyle = '#8c7a6e'; c.lineWidth = 1; c.beginPath(); c.moveTo(top.x, top.y); c.lineTo(low.x, low.y); c.moveTo(low.x - 4, low.y + 4); c.lineTo(low.x, low.y); c.lineTo(low.x + 4, low.y + 4); c.stroke();
+      this.box(x - 0.02, y - 0.02, 1.6, 0.84, 0.84, 0.22, '#faf6ed', '#e9b8aa', '#d9a596');
+      const s = P(x + 0.4, y + 0.82, 1.71);
+      c.fillStyle = '#70584a'; c.font = '800 6px ui-sans-serif, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('인형뽑기', s.x, s.y);
+    }
+
     // Santa hat sitting on the top of the head (drawn in the sprite's own space).
     santaHat(top, W, t) {
       const c = this.ctx;
@@ -2775,6 +2935,13 @@
     treeSkirt(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const ring = (r) => Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * Math.PI * 2; return P(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.01); });
+      if (this.plan && this.plan.paper) {
+        this.poly(ring(1.5), 'rgba(233,184,170,.75)', 'rgba(112,88,74,.5)', 1);
+        this.poly(ring(1.32), 'rgba(250,246,237,1)', 'rgba(112,88,74,.35)', 0.8);
+        const c = this.ctx; c.fillStyle = 'rgba(233,184,170,.9)';
+        for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2, q = P(x + Math.cos(a) * 1.1, y + Math.sin(a) * 1.1, 0.01); c.beginPath(); c.arc(q.x, q.y, 1.5, 0, Math.PI * 2); c.fill(); }
+        return;
+      }
       this.poly(ring(1.45), '#f7f2ea');
       this.poly(ring(1.32), '#d42a2a');
       const c = this.ctx;
