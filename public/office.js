@@ -58,7 +58,7 @@
   const ACT_EMOJI = {
     coffee: '☕', water: '💧', fridge: '🍎', sink: '🫧', stool: '💬', couch: '💬', beanbag: '🎧',
     window: '☁️', read: '📖', whiteboard: '✏️', meeting: '💬', arcade: '🎮', pingpong: '🏓', plant: '🌱',
-    vending: '🥤', foosball: '⚽', phone: '📞', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
+    vending: '🥤', foosball: '⚽', phone: '📞', weed: '🌿', pond: '🐸', board: '📋', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
   };
 
   // What everyone is up to, shown as a little caption ("🎮 게임 중").
@@ -71,7 +71,10 @@
     stool: [['💬', '수다 떠는 중'], ['🍩', '도넛 먹는 중'], ['☁️', '멍 때리는 중']],
     couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
     beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
-    window: WINTER ? [['❄️', '눈 구경 중'], ['☁️', '창밖 보는 중']] : [['☁️', '창밖 보는 중'], ['🌤️', '날씨 구경 중']],
+    window: WINTER ? [['❄️', '눈 구경 중'], ['⛰️', '경치 구경 중']] : [['⛰️', '경치 구경 중'], ['☁️', '구름 구경 중'], ['🌤️', '날씨 구경 중']],
+    weed: [['🌿', '풀 뽑는 중'], ['💰', '근로 중'], ['🌿', '제초 알바 중'], ['💦', '땀 흘리며 일하는 중']],
+    pond: [['🐸', '개구리 구경 중'], ['🐟', '물고기 구경 중'], ['🪷', '연못 멍 중']],
+    board: [['📋', '근로 공고 보는 중'], ['📋', '알바 찾는 중'], ['🤔', '어떤 일 할지 고민 중']],
     read: [['📖', '책 읽는 중'], ['📚', '만화책 보는 중'], ['📖', '공부하는 척']],
     whiteboard: [['✏️', '낙서하는 중'], ['💡', '아이디어 정리 중'], ['✏️', '그림 그리는 중']],
     meeting: [['💬', '회의 중'], ['🗣️', '토론 중'], ['😴', '회의 중 졸음']],
@@ -577,7 +580,9 @@
       };
 
       // ---- cubicle pods: 4 desks back to back with a divider
+      const podRects = [];
       const pod = (px, py, panel) => {
+        podRects.push({ x0: px - 0.45, y0: py - 1.05, x1: px + 3.2, y1: py + 2.7 });
         for (let k = 0; k < 2; k++) {
           const x = px + k * 1.5;
           desks.push({ x, y: py, side: 'n', seat: { x: x + 0.7, y: py - 0.45 } });
@@ -599,10 +604,12 @@
       // A smaller meeting room leaves room for one more pod next to it.
       const GX = OW + 3.6;                         // meeting room starts here
       pod(OW + 0.45, 2.0, PANEL[pods % PANEL.length]);
+      const last = podRects[podRects.length - 1]; last.x1 = Math.min(last.x1, GX - 0.08);
+      const VILLAGE = !!pal.cute;
 
       // ---- open office extras
       const rx = OW - 1.15;
-      add(rx + 0.35 + 0.5, () => this.serverRack(rx, 0.2));
+      add(rx + 0.35 + 0.5, () => (VILLAGE ? this.roundTree(rx + 0.35, 0.5) : this.serverRack(rx, 0.2)));
       prop('rack', { x: rx, y: 0.2 });
       prop('printer', { x: OW - 2.3, y: 0.25 });
       solid(rx, 0.2, 0.7, 0.6);
@@ -672,7 +679,7 @@
           solid(OW - 1.45, fy + 0.65, 0.5, 0.5);
           solid(6.35, fy + 0.25, 0.5, 0.5);
         }
-        add(OW - 0.45 + D - 0.6, () => this.plant(OW - 0.45, D - 0.6));
+        if (!VILLAGE || !low) add(OW - 0.45 + D - 0.6, () => this.plant(OW - 0.45, D - 0.6)); // the pond sits there in the village
         prop('plant', { x: OW - 0.45, y: D - 0.6 });
       }
 
@@ -767,15 +774,37 @@
       add(W - 0.5 + D - 0.5, () => this.plant(W - 0.5, D - 0.5));
       add(lx - 0.2 + D - 0.6, () => this.floorLamp(lx - 0.2, D - 0.6));
 
+      // ---- village: job board, pond, weeding patch, mushrooms
+      let pond = null, weeds = null, board = null;
+      if (VILLAGE) {
+        board = { x: 0.28, y: OD + 0.35, len: 1.1 };
+        add(0.28 + OD + 0.9, () => this.jobBoard(board.x, board.y, board.len));
+        solid(0.1, OD + 0.3, 0.4, 1.2);
+        poi(1.05, OD + 0.9, 'board', 'back', { w: 1.6 });
+        if (D - fy >= 4.2) {
+          pond = { x: Math.min(OW - 2.0, 7.3), y: D - 1.45, rx: 1.1, ry: 0.72 };
+          solid(pond.x - 1.05, pond.y - 0.68, 2.1, 1.36, 0.05);
+          poi(pond.x - 0.3, pond.y - 1.05, 'pond', 'front', { w: 1.8 });
+          poi(pond.x + 0.9, pond.y - 0.85, 'pond', 'front', { w: 1.8 });
+          weeds = { x0: 1.5, y0: fy + 2.0, x1: 3.8, y1: fy + 3.0 };
+          poi(2.0, fy + 2.5, 'weed', 'front', { w: 2.2 });
+          poi(3.2, fy + 2.6, 'weed', 'front', { w: 2.2 });
+          for (const [mx2, my2, col] of [[pond.x + 1.35, pond.y + 0.45, '#ef6b5b'], [pond.x - 1.3, pond.y + 0.55, '#f2a03d'], [1.1, fy + 3.3, '#ef6b5b']]) {
+            add(mx2 + my2, () => this.mushroom(mx2, my2, col));
+          }
+        }
+      }
+
       const posters = [
         { y: 2.2, color: '#c96442', text: 'SHIP IT' },
         { y: 4.6, color: '#10a37f', text: 'TESTS ✓' },
       ];
-      return { W, D, OW, OD, MR, PY, RW, GX, pods, tree, grid, items, props, pois, desks, windows, posters, pp, door: { x: 0.4, y: D - 1.2 } };
+      return { W, D, OW, OD, MR, PY, RW, GX, pods, tree, podRects, pond, weeds, board, grid, items, props, pois, desks, windows, posters, pp, door: { x: 0.4, y: D - 1.2 } };
     }
 
     glassX(add, x, y, d) {
       if (BARE) return;
+      if (this.pal.cute) { add(x + y + d / 2 + 0.02, () => this.fenceRun((u, z) => this.iso(x, y + u, z), d, 0.62)); return; }
       add(x + y + d / 2 + 0.02, () => {
         const P = (a, b, c) => this.iso(a, b, c);
         this.poly([P(x, y, 0), P(x, y + d, 0), P(x, y + d, 0.22), P(x, y, 0.22)], this.pal.trim);
@@ -785,6 +814,7 @@
 
     glassY(add, x, y, w) {
       if (BARE) return;
+      if (this.pal.cute) { add(x + w / 2 + y + 0.02, () => this.fenceRun((u, z) => this.iso(x + u, y, z), w, 0.62)); return; }
       add(x + w / 2 + y + 0.02, () => {
         const P = (a, b, c) => this.iso(a, b, c);
         this.poly([P(x, y, 0), P(x + w, y, 0), P(x + w, y, 0.22), P(x, y, 0.22)], this.pal.trim);
@@ -1196,6 +1226,7 @@
 
     drawRoom() {
       if (BARE) return;
+      if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
       const pal = this.pal;
@@ -1319,6 +1350,338 @@
       if (XMAS) this.xmasWalls();
     }
 
+    // ------------------------------------------------------------ village
+
+    // A cosy village instead of an office shell: a grassy meadow, wooden decks
+    // under the desks, a picket fence with sky and rolling hills beyond it (the
+    // sky follows the real time of day), a flower-arch gate, a pond and a
+    // weeding patch.
+    villageRoom() {
+      const { W, D, OW, MR, PY, pp, podRects, pond, weeds } = this.plan;
+      const GX = this.plan.GX || OW;
+      const pal = this.pal;
+      const P = (x, y, z) => this.iso(x, y, z);
+      const c = this.ctx, t = this.t / 1000;
+      const rnd = (i) => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+      const inDeck = (x, y) => (x > GX && y < MR) || (x > OW && y > MR) || podRects.some((r) => x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1);
+
+      // ---- walls: sky, hills, little houses, fence
+      this.villageWall(W, (u, z) => P(u, 0, z), 0, null);
+      this.villageWall(D, (u, z) => P(0, u, z), 3, this.plan.door.y);
+
+      // ---- meadow
+      for (let x = 0; x < Math.ceil(W); x++) {
+        for (let y = 0; y < Math.ceil(D); y++) {
+          const x1 = Math.min(W, x + 1), y1 = Math.min(D, y + 1);
+          this.poly([P(x, y), P(x1, y), P(x1, y1), P(x, y1)], (x + y) % 2 ? 'rgba(198,230,163,1)' : 'rgba(188,224,152,1)');
+        }
+      }
+      // grass tufts and little flowers
+      const FL = ['#ffffff', '#ffc7d6', '#fff3a6', '#d9c7ff'];
+      for (let i = 0; i < W * D * 1.1; i++) {
+        const x = 0.2 + rnd(i) * (W - 0.4), y = 0.2 + rnd(i + 999) * (D - 0.4);
+        if (inDeck(x, y)) continue;
+        const q = P(x, y);
+        if (i % 6 === 0) {
+          c.fillStyle = FL[i % FL.length];
+          for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; c.beginPath(); c.arc(q.x + Math.cos(a) * 1.8, q.y + Math.sin(a) * 1.1 - 1, 1.2, 0, Math.PI * 2); c.fill(); }
+          c.fillStyle = '#f5b83d'; c.beginPath(); c.arc(q.x, q.y - 1, 0.9, 0, Math.PI * 2); c.fill();
+        } else {
+          c.strokeStyle = 'rgba(112,170,92,.75)'; c.lineWidth = 1; c.lineCap = 'round';
+          c.beginPath(); c.moveTo(q.x - 2, q.y); c.lineTo(q.x - 3, q.y - 3.5); c.moveTo(q.x, q.y); c.lineTo(q.x, q.y - 4.5); c.moveTo(q.x + 2, q.y); c.lineTo(q.x + 3, q.y - 3.5); c.stroke();
+        }
+      }
+      this.poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], null, pal.ink, 1.4);
+
+      // ---- wooden decks: under every desk pod, the meeting nook and the lounge
+      const deck = (x0, y0, x1, y1, col, line) => {
+        const h = 0.05;
+        this.poly([P(x0, y1, 0), P(x1, y1, 0), P(x1, y1, h), P(x0, y1, h)], this.shade(col, -28), pal.ink, 0.8);
+        this.poly([P(x1, y0, 0), P(x1, y1, 0), P(x1, y1, h), P(x1, y0, h)], this.shade(col, -40), pal.ink, 0.8);
+        this.poly([P(x0, y0, h), P(x1, y0, h), P(x1, y1, h), P(x0, y1, h)], col, pal.ink, 0.9);
+        for (let y = y0 + 0.34; y < y1 - 0.05; y += 0.34) this.poly([P(x0, y, h), P(x1, y, h), P(x1, y + 0.015, h), P(x0, y + 0.015, h)], line);
+      };
+      for (const r of podRects) deck(r.x0, r.y0, r.x1, r.y1, 'rgba(246,216,176,1)', 'rgba(185,135,95,.32)');
+      deck(GX, 0, W, MR, 'rgba(240,206,168,1)', 'rgba(170,120,85,.3)');
+      deck(OW, PY, W, D, 'rgba(246,220,186,1)', 'rgba(185,135,95,.28)');
+      // the café plaza between them: cream cobbles
+      for (let i = 0; i < Math.ceil((W - OW) * 2); i++) {
+        for (let j = 0; j < Math.ceil((PY - MR) * 2); j++) {
+          const x = OW + i / 2 + 0.03, y = MR + j / 2 + 0.03;
+          const x1 = Math.min(W, x + 0.44), y1 = Math.min(PY, y + 0.44);
+          this.poly([P(x, y), P(x1, y), P(x1, y1), P(x, y1)], (i + j) % 3 ? 'rgba(247,238,222,1)' : 'rgba(250,226,226,1)', 'rgba(160,130,100,.25)', 0.8);
+        }
+      }
+      this.poly([P(OW + 0.3, PY + 0.6), P(OW + 4.3, PY + 0.6), P(OW + 4.3, D - 0.4), P(OW + 0.3, D - 0.4)], pal.rug);
+      this.poly([P(OW + 0.5, PY + 0.8), P(OW + 4.1, PY + 0.8), P(OW + 4.1, D - 0.6), P(OW + 0.5, D - 0.6)], null, pal.rugEdge);
+      this.poly([P(pp.x0 - 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y - 1.4), P(pp.x1 + 0.6, pp.y + 1.3), P(pp.x0 - 0.6, pp.y + 1.3)], 'rgba(168,214,150,1)', 'rgba(255,255,255,.7)', 1.2);
+
+      // ---- stepping-stone path from the gate into the village
+      const dy = this.plan.door.y;
+      const path = [[0.6, dy], [3.9, dy + 0.25], [4.2, Math.min(dy - 2.2, 11)], [6.6, 10.75], [OW, 11.2]];
+      let n = 0;
+      for (let k = 0; k < path.length - 1; k++) {
+        const [ax, ay] = path[k], [bx, by] = path[k + 1];
+        const len = Math.hypot(bx - ax, by - ay);
+        for (let u = 0; u < len; u += 0.62) {
+          const x = ax + (bx - ax) * u / len + (rnd(n) - 0.5) * 0.12, y = ay + (by - ay) * u / len + (rnd(n + 50) - 0.5) * 0.12;
+          n++;
+          const pts = [];
+          for (let a = 0; a < 10; a++) pts.push(P(x + Math.cos(a / 10 * Math.PI * 2) * 0.24, y + Math.sin(a / 10 * Math.PI * 2) * 0.2));
+          this.poly(pts, 'rgba(236,228,214,1)', 'rgba(150,125,100,.45)', 0.9);
+        }
+      }
+
+      // ---- weeding patch: tall wild grass to pull
+      if (weeds) {
+        const { x0, y0, x1, y1 } = weeds;
+        this.poly([P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)], 'rgba(178,214,132,1)', 'rgba(120,160,80,.5)', 1);
+        for (let i = 0; i < 70; i++) {
+          const x = x0 + 0.1 + rnd(i + 300) * (x1 - x0 - 0.2), y = y0 + 0.1 + rnd(i + 700) * (y1 - y0 - 0.2);
+          const q = P(x, y), sw = Math.sin(t * 1.8 + i) * 1.4, h = 7 + rnd(i + 5) * 6;
+          c.strokeStyle = i % 3 ? 'rgba(98,158,70,1)' : 'rgba(132,186,92,1)'; c.lineWidth = 1.3; c.lineCap = 'round';
+          c.beginPath();
+          c.moveTo(q.x - 2, q.y); c.quadraticCurveTo(q.x - 3, q.y - h / 2, q.x - 4 + sw, q.y - h);
+          c.moveTo(q.x, q.y); c.quadraticCurveTo(q.x, q.y - h / 2, q.x + sw, q.y - h - 2);
+          c.moveTo(q.x + 2, q.y); c.quadraticCurveTo(q.x + 3, q.y - h / 2, q.x + 4 + sw, q.y - h + 1);
+          c.stroke();
+          if (i % 9 === 0) { c.fillStyle = '#fff6b0'; c.beginPath(); c.arc(q.x + sw, q.y - h - 3, 1.6, 0, Math.PI * 2); c.fill(); }
+        }
+        // a little sign: 풀뽑기
+        const s = P(x0 + 0.1, y0 + 0.05, 0);
+        c.fillStyle = '#b8835a'; c.fillRect(s.x - 1, s.y - 20, 2, 20);
+        this.roundRect(s.x - 15, s.y - 30, 30, 12, 3, '#fff3dc', '#a8774f');
+        c.fillStyle = '#6b4a3a'; c.font = '800 7px ui-sans-serif, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('풀뽑기', s.x, s.y - 23.5);
+      }
+
+      // ---- pond with lily pads and a frog
+      if (pond) {
+        const { x, y, rx, ry } = pond;
+        const ring = (k, dz = 0) => { const pts = []; for (let a = 0; a < 28; a++) pts.push(P(x + Math.cos(a / 28 * Math.PI * 2) * rx * k, y + Math.sin(a / 28 * Math.PI * 2) * ry * k, dz)); return pts; };
+        this.poly(ring(1.12), 'rgba(214,206,190,1)', pal.ink, 1);
+        this.poly(ring(1.0), 'rgba(150,206,236,1)', 'rgba(90,140,170,.5)', 1);
+        this.poly(ring(0.6), 'rgba(176,222,244,1)');
+        for (let k = 0; k < 2; k++) {
+          const r = ((t * 0.35 + k * 0.5) % 1);
+          c.globalAlpha = (1 - r) * 0.6;
+          this.poly(ring(0.2 + r * 0.6), null, '#ffffff', 1);
+          c.globalAlpha = 1;
+        }
+        for (const [ox, oy, s] of [[-0.5, 0.15, 1], [0.45, -0.2, 0.8], [0.2, 0.35, 0.7]]) {
+          const q = P(x + ox, y + oy);
+          c.fillStyle = 'rgba(110,180,96,1)';
+          c.beginPath(); c.ellipse(q.x, q.y, 9 * s, 4.5 * s, 0, 0.35, Math.PI * 2); c.lineTo(q.x, q.y); c.fill();
+        }
+        const pink = P(x + 0.45, y - 0.2);
+        c.fillStyle = '#ffb3c8'; for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c.beginPath(); c.ellipse(pink.x + Math.cos(a) * 2.5, pink.y - 3 + Math.sin(a) * 1.4, 2.4, 1.3, a, 0, Math.PI * 2); c.fill(); }
+        // the frog hops between pads now and then
+        const hop = (t % 7) < 0.5 ? Math.sin((t % 7) / 0.5 * Math.PI) * 7 : 0;
+        const f = P(x - 0.5, y + 0.15);
+        c.fillStyle = '#7cc06a'; c.beginPath(); c.ellipse(f.x, f.y - 3 - hop, 4.5, 3.5, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#fff'; for (const ex of [-2, 2]) { c.beginPath(); c.arc(f.x + ex, f.y - 6.5 - hop, 1.5, 0, Math.PI * 2); c.fill(); }
+        c.fillStyle = '#333'; for (const ex of [-2, 2]) { c.beginPath(); c.arc(f.x + ex, f.y - 6.5 - hop, 0.7, 0, Math.PI * 2); c.fill(); }
+      }
+      if (this.plan.tree) this.treeSkirt(this.plan.tree.x, this.plan.tree.y);
+
+      // ---- the meeting nook's standing whiteboard
+      const wx = GX + 0.5;
+      for (const lx of [wx + 0.15, wx + 2.35]) this.poly([P(lx, 0.05, 0), P(lx + 0.08, 0.05, 0), P(lx + 0.08, 0.05, 0.85), P(lx, 0.05, 0.85)], '#b8835a', pal.ink, 0.8);
+      this.poly([P(wx, 0.05, 0.8), P(wx + 2.6, 0.05, 0.8), P(wx + 2.6, 0.05, 1.95), P(wx, 0.05, 1.95)], '#fdfdfb', '#b8835a', 2);
+      this.onWall('y0', wx + 0.25, 1.75, (cc) => {
+        cc.lineWidth = 1.4;
+        cc.strokeStyle = '#3b8ee0'; cc.beginPath(); cc.moveTo(0, 0); cc.lineTo(22, 0); cc.moveTo(0, 7); cc.lineTo(36, 7); cc.stroke();
+        cc.strokeStyle = '#c96442'; cc.strokeRect(46, -2, 20, 12); cc.strokeRect(80, 6, 20, 12);
+        cc.beginPath(); cc.moveTo(66, 4); cc.lineTo(80, 12); cc.stroke();
+        cc.strokeStyle = '#5f9a4c'; cc.beginPath(); cc.moveTo(0, 22); for (let i = 0; i < 8; i++) cc.lineTo(i * 8, 22 - ((i * 37) % 13)); cc.stroke();
+      });
+    }
+
+    // One wall of the village: sky that follows the real time of day, rolling
+    // hills with little houses and trees, falling snow in winter, a picket
+    // fence with bushes in front, and (on the left wall) the flower-arch gate.
+    villageWall(len, at, seed, gateY) {
+      const c = this.ctx, t = this.t / 1000, pal = this.pal;
+      const h = new Date().getHours() + new Date().getMinutes() / 60;
+      const night = h < 5 || h >= 19, dawn = h >= 5 && h < 7, dusk = h >= 17 && h < 19;
+      const [lo, hi] = night ? [[64, 76, 128], [24, 32, 66]] : dawn ? [[255, 228, 204], [244, 186, 178]] : dusk ? [[255, 206, 168], [196, 150, 204]] : [[226, 244, 252], [146, 204, 242]];
+      const quad = (u0, u1, z0, z1, fill, stroke, lw) => this.poly([at(u0, z0), at(u1, z0), at(u1, z1), at(u0, z1)], fill, stroke, lw);
+      const N = 10;
+      for (let k = 0; k < N; k++) {
+        const m = k / (N - 1), col = lo.map((v, i) => Math.round(v + (hi[i] - v) * m));
+        quad(0, len, WALL_H * k / N, WALL_H * (k + 1) / N + 0.01, `rgba(${col},1)`);
+      }
+      const rnd = (i) => { const v = Math.sin(i * 91.7 + seed * 13.3) * 43758.5453; return v - Math.floor(v); };
+      if (night) {
+        for (let i = 0; i < len * 2.5; i++) {
+          const q = at(rnd(i) * len, 1.2 + rnd(i + 40) * 1.1);
+          c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 2 + i); c.fillStyle = '#fff8d8';
+          c.beginPath(); c.arc(q.x, q.y, 0.9 + rnd(i + 9) * 0.8, 0, Math.PI * 2); c.fill();
+        }
+        c.globalAlpha = 1;
+        if (!seed) { const m = at(len * 0.72, 2.0); c.fillStyle = '#fff3c4'; c.beginPath(); c.arc(m.x, m.y, 9, 0, Math.PI * 2); c.fill(); c.fillStyle = `rgba(${hi},1)`; c.beginPath(); c.arc(m.x + 4, m.y - 3, 8, 0, Math.PI * 2); c.fill(); }
+      } else {
+        if (!seed) {
+          const s = at(len * 0.72, 1.95);
+          c.fillStyle = 'rgba(255,240,170,.35)'; c.beginPath(); c.arc(s.x, s.y, 20, 0, Math.PI * 2); c.fill();
+          c.fillStyle = dawn || dusk ? '#ffb27a' : '#ffe27a'; c.beginPath(); c.arc(s.x, s.y, 11, 0, Math.PI * 2); c.fill();
+        }
+        for (let i = 0; i < Math.max(2, Math.round(len / 5)); i++) {
+          const u = ((t * 0.06 + i * len / Math.max(2, Math.round(len / 5)) + seed) % (len + 2)) - 1;
+          if (u < 0.3 || u > len - 0.3) continue;
+          const q = at(u, 1.75 + (i % 2) * 0.3);
+          c.fillStyle = 'rgba(255,255,255,.92)';
+          c.beginPath(); c.ellipse(q.x, q.y, 11, 4.5, 0, 0, Math.PI * 2); c.ellipse(q.x + 6, q.y - 3.5, 7, 5, 0, 0, Math.PI * 2); c.ellipse(q.x - 6, q.y - 2, 5.5, 4, 0, 0, Math.PI * 2); c.fill();
+        }
+      }
+      // hills: far (with little houses) and near (with round trees)
+      const hill = (base, a1, a2, ph) => (u) => base + a1 * Math.sin(u * 0.55 + ph) + a2 * Math.sin(u * 1.35 + ph * 2);
+      const far = hill(1.5, 0.3, 0.12, seed + 0.4), near = hill(1.08, 0.2, 0.1, seed + 2.1);
+      const snow = WINTER;
+      const hillPoly = (fz, fill) => {
+        const pts = [at(0, 0)];
+        for (let u = 0; u <= len + 0.001; u += 0.25) pts.push(at(Math.min(u, len), fz(Math.min(u, len))));
+        pts.push(at(len, 0));
+        this.poly(pts, fill, 'rgba(107,74,58,.35)', 1);
+        if (snow) {
+          // a snowy cap along the ridge
+          const cap = [];
+          for (let u = 0; u <= len + 0.001; u += 0.25) cap.push(at(Math.min(u, len), fz(Math.min(u, len))));
+          for (let u = len; u >= -0.001; u -= 0.25) { const uu = Math.max(u, 0); cap.push(at(uu, fz(uu) - 0.1 - 0.05 * Math.sin(uu * 3.1))); }
+          this.poly(cap, 'rgba(255,255,255,.95)');
+        }
+      };
+      hillPoly(far, 'rgba(176,216,160,1)');
+      const roofs = ['#ef7f6f', '#7fa8e0', '#f2a65a', '#c98fd6'];
+      for (let k = 0; k < Math.max(2, Math.round(len / 5)); k++) {
+        const u = len * (k + 0.5) / Math.max(2, Math.round(len / 5)) + (rnd(k + 3) - 0.5) * 1.2;
+        if (u < 0.6 || u > len - 0.8) continue;
+        const z = far(u) - 0.12, w = 0.45;
+        this.poly([at(u, z), at(u + w, z), at(u + w, z + 0.28), at(u, z + 0.28)], '#fff6e6', 'rgba(107,74,58,.6)', 0.8);
+        this.poly([at(u - 0.06, z + 0.26), at(u + w + 0.06, z + 0.26), at(u + w / 2, z + 0.5)], snow ? '#ffffff' : roofs[(k + seed) % roofs.length], 'rgba(107,74,58,.6)', 0.8);
+        const wq = at(u + w * 0.5, z + 0.14);
+        c.fillStyle = night ? '#ffd86b' : '#9fc6e8'; c.fillRect(wq.x - 2, wq.y - 2, 4, 4);
+        if (night) { c.fillStyle = 'rgba(255,216,107,.3)'; c.beginPath(); c.arc(wq.x, wq.y, 6, 0, Math.PI * 2); c.fill(); }
+        if (snow) { for (let i = 0; i < 3; i++) { const q = at(u + w * 0.8, z + 0.55 + ((t * 0.25 + i / 3) % 1) * 0.4); c.globalAlpha = 0.5 * (1 - ((t * 0.25 + i / 3) % 1)); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(q.x, q.y, 2.5, 0, Math.PI * 2); c.fill(); } c.globalAlpha = 1; }
+      }
+      hillPoly(near, 'rgba(152,204,134,1)');
+      for (let k = 0; k < Math.round(len / 3); k++) {
+        const u = 0.8 + rnd(k + 20) * (len - 1.6), z = near(u) - 0.05, q = at(u, z), top = at(u, z + 0.32);
+        c.fillStyle = '#b8835a'; c.fillRect(q.x - 1, top.y, 2, q.y - top.y);
+        c.fillStyle = snow ? '#e7f1ef' : (k % 2 ? 'rgba(108,176,96,1)' : 'rgba(124,190,104,1)');
+        c.beginPath(); c.arc(top.x, top.y - 2, 6.5, 0, Math.PI * 2); c.arc(top.x - 4, top.y + 1, 4.5, 0, Math.PI * 2); c.arc(top.x + 4, top.y + 1, 4.5, 0, Math.PI * 2); c.fill();
+      }
+      if (snow) {
+        c.fillStyle = 'rgba(255,255,255,.95)';
+        for (let i = 0; i < len * 3; i++) {
+          const u = (rnd(i + 70) * len + Math.sin(t * 0.6 + i) * 0.08 + len) % len;
+          const z = WALL_H - ((t * 0.1 + rnd(i + 11)) % 1) * WALL_H;
+          const q = at(u, z);
+          c.beginPath(); c.arc(q.x, q.y, 1.3, 0, Math.PI * 2); c.fill();
+        }
+      }
+      quad(0, len, 0, WALL_H, null, pal.ink, 1.4);
+      // bushes behind the fence, then the fence
+      for (let i = 0; i < len * 1.4; i++) {
+        const u = rnd(i + 200) * len;
+        if (gateY != null && Math.abs(u - gateY) < 0.75) continue;
+        const q = at(u, 0.22);
+        c.fillStyle = i % 2 ? 'rgba(122,186,104,1)' : 'rgba(140,200,118,1)';
+        c.beginPath(); c.arc(q.x, q.y, 6 + rnd(i) * 3, 0, Math.PI * 2); c.arc(q.x + 6, q.y + 2, 5, 0, Math.PI * 2); c.fill();
+        if (snow) { c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(q.x + 1, q.y - 5, 5, 2.2, 0, 0, Math.PI * 2); c.fill(); }
+        else if (i % 4 === 0) { c.fillStyle = '#ffc2d3'; c.beginPath(); c.arc(q.x - 2, q.y - 3, 1.6, 0, Math.PI * 2); c.arc(q.x + 4, q.y - 1, 1.6, 0, Math.PI * 2); c.fill(); }
+      }
+      if (gateY == null) this.fenceRun(at, len, 0.8);
+      else {
+        this.fenceRun(at, gateY - 0.7, 0.8);
+        this.fenceRun((u, z) => at(gateY + 0.7 + u, z), len - gateY - 0.7, 0.8);
+        // the gate: two posts and a flower arch, with the clock on top
+        for (const g of [gateY - 0.72, gateY + 0.62]) this.poly([at(g, 0), at(g + 0.1, 0), at(g + 0.1, 1.55), at(g, 1.55)], '#c08a5c', pal.ink, 0.9);
+        c.lineCap = 'round';
+        const arch = (u) => at(u, 1.5 + Math.sin(((u - (gateY - 0.67)) / 1.34) * Math.PI) * 0.32);
+        c.strokeStyle = '#c08a5c'; c.lineWidth = 3; c.beginPath();
+        for (let u = gateY - 0.67; u <= gateY + 0.67; u += 0.06) { const q = arch(u); u === gateY - 0.67 ? c.moveTo(q.x, q.y) : c.lineTo(q.x, q.y); }
+        c.stroke();
+        let k = 0;
+        for (let u = gateY - 0.72; u <= gateY + 0.72; u += 0.1, k++) {
+          const q = arch(Math.min(Math.max(u, gateY - 0.67), gateY + 0.67));
+          c.fillStyle = k % 3 === 0 ? '#ff9fb8' : k % 3 === 1 ? '#7cc06a' : '#fff1a8';
+          c.beginPath(); c.arc(q.x + (k % 2 ? 1.5 : -1.5), q.y + (k % 2 ? -1 : 1.5), k % 3 === 1 ? 3.2 : 2.4, 0, Math.PI * 2); c.fill();
+        }
+        this.onWall('x0', gateY, 2.08, (cc) => {
+          cc.beginPath(); cc.arc(0, 0, 10, 0, Math.PI * 2); cc.fillStyle = '#fffdf8'; cc.fill();
+          cc.lineWidth = 2; cc.strokeStyle = '#c08a5c'; cc.stroke();
+          const d = new Date();
+          const hand = (ang, l, w) => { cc.beginPath(); cc.moveTo(0, 0); cc.lineTo(Math.sin(ang) * l, -Math.cos(ang) * l); cc.lineWidth = w; cc.strokeStyle = pal.bubbleInk; cc.stroke(); };
+          hand(((d.getHours() % 12) + d.getMinutes() / 60) / 12 * Math.PI * 2, 5, 2);
+          hand((d.getMinutes() / 60) * Math.PI * 2, 7.5, 1.4);
+        });
+        const P = (x, y) => this.iso(x, y, 0);
+        this.poly([P(0.05, gateY - 0.6), P(0.9, gateY - 0.6), P(0.9, gateY + 0.6), P(0.05, gateY + 0.6)], 'rgba(222,196,160,1)', 'rgba(150,120,90,.4)');
+      }
+    }
+
+    // A white picket fence along at(u, z) for u in [0, len].
+    fenceRun(at, len, h) {
+      if (len <= 0.05) return;
+      const ink = this.pal.ink, white = 'rgba(255,251,244,1)';
+      for (const z of [h * 0.3, h * 0.68]) this.poly([at(0, z), at(len, z), at(len, z + 0.06), at(0, z + 0.06)], 'rgba(244,234,220,1)', ink, 0.7);
+      for (let u = 0.04; u < len - 0.08; u += 0.26) {
+        this.poly([at(u, 0), at(u + 0.15, 0), at(u + 0.15, h), at(u + 0.075, h + 0.1), at(u, h)], white, ink, 0.8);
+      }
+    }
+
+    roundTree(x, y) {
+      const c = this.ctx, b = this.iso(x, y, 0);
+      this.box(x - 0.08, y - 0.08, 0, 0.16, 0.16, 0.75, '#c99a6e', '#b8835a', '#a5744d');
+      const q = this.iso(x, y, 1.35), sway = Math.sin(this.t / 1600 + x) * 1.2;
+      const col = WINTER ? ['#9ccc8c', '#b2d9a3'] : ['#7cc06a', '#98d184'];
+      c.strokeStyle = this.pal.ink; c.lineWidth = 1;
+      for (const [ox, oy, r, k] of [[-11, 4, 12, 0], [11, 4, 12, 0], [0, -6, 15, 1], [-5, 9, 10, 1], [6, 10, 10, 1]]) {
+        c.fillStyle = col[k]; c.beginPath(); c.arc(q.x + ox + sway, q.y + oy, r, 0, Math.PI * 2); c.fill(); c.stroke();
+      }
+      c.fillStyle = col[1]; for (const [ox, oy, r] of [[-11, 4, 11], [11, 4, 11], [0, -6, 14], [-5, 9, 9], [6, 10, 9]]) { c.beginPath(); c.arc(q.x + ox + sway, q.y + oy, r, 0, Math.PI * 2); c.fill(); }
+      if (WINTER) { c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(q.x + sway, q.y - 17, 11, 4.5, 0, 0, Math.PI * 2); c.ellipse(q.x - 12 + sway, q.y - 5, 6, 2.5, 0, 0, Math.PI * 2); c.fill(); }
+      else { c.fillStyle = '#ef6b5b'; for (const [ox, oy] of [[-8, 2], [7, -4], [2, 10], [-2, -10]]) { c.beginPath(); c.arc(q.x + ox + sway, q.y + oy, 2.3, 0, Math.PI * 2); c.fill(); } }
+      if (XMAS) { const cols = ['#ff4d4d', '#ffd23f', '#4db8ff', '#ff7ad9']; for (let i = 0; i < 9; i++) { const a = i * 0.9, on = Math.sin(this.t / 400 + i) > -0.3; c.globalAlpha = on ? 1 : 0.35; c.fillStyle = cols[i % 4]; c.beginPath(); c.arc(q.x + Math.cos(a) * 12 + sway, q.y + Math.sin(a) * 9 + 2, 1.8, 0, Math.PI * 2); c.fill(); } c.globalAlpha = 1; }
+      void b;
+    }
+
+    mushroom(x, y, col) {
+      const c = this.ctx, q = this.iso(x, y, 0);
+      c.fillStyle = 'rgba(120,80,60,.14)'; c.beginPath(); c.ellipse(q.x, q.y, 7, 3.5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff6e8'; c.strokeStyle = this.pal.ink; c.lineWidth = 0.9;
+      c.beginPath(); c.roundRect ? c.roundRect(q.x - 3, q.y - 9, 6, 9, 2) : c.rect(q.x - 3, q.y - 9, 6, 9); c.fill(); c.stroke();
+      c.fillStyle = col; c.beginPath(); c.ellipse(q.x, q.y - 9, 8.5, 6.5, 0, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#ffffff'; for (const [ox, oy, r] of [[-4, -11, 1.6], [2, -13, 1.9], [5, -10, 1.2]]) { c.beginPath(); c.arc(q.x + ox, q.y + oy, r, 0, Math.PI * 2); c.fill(); }
+      if (WINTER) { c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(q.x, q.y - 15, 5, 1.6, 0, 0, Math.PI * 2); c.fill(); }
+    }
+
+    // The village job board (along the left side), notices pinned up.
+    jobBoard(x, y, len) {
+      const c = this.ctx, pal = this.pal;
+      const P = (yy, z) => this.iso(x, yy, z);
+      for (const ly of [y + 0.1, y + len - 0.18]) this.box(x - 0.04, ly, 0, 0.08, 0.08, 1.0, '#c99a6e', '#b8835a', '#a5744d');
+      this.poly([P(y, 0.95), P(y + len, 0.95), P(y + len, 1.85), P(y, 1.85)], 'rgba(222,178,128,1)', '#a8774f', 2);
+      this.poly([P(y - 0.08, 1.85), P(y + len + 0.08, 1.85), P(y + len / 2, 2.15)], WINTER ? '#ffffff' : 'rgba(239,127,111,1)', pal.ink, 1);
+      const o = this.iso(x, y + len, 0);
+      c.save();
+      c.translate(o.x, o.y);
+      c.transform(1, -0.5, 0, 1, 0, 0);
+      const px = (yy) => yy * TW / 2, pz = (z) => -z * TH; // yy measured from the near end
+      c.fillStyle = '#6b4a3a'; c.font = '800 7px ui-sans-serif, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('구인 게시판', px(len / 2), pz(1.73));
+      const notes = [['#fffdf5', '풀뽑기'], ['#ffe0ea', '배달'], ['#e3f1ff', '청소'], ['#fff1c2', '토벌']];
+      notes.forEach(([bg, txt], i) => {
+        const nx = px(0.12 + (i % 2) * len * 0.45), nz = pz(1.58 - Math.floor(i / 2) * 0.33);
+        c.fillStyle = bg; c.fillRect(nx, nz, len * TW / 2 * 0.4, 9);
+        c.strokeStyle = 'rgba(107,74,58,.4)'; c.lineWidth = 0.6; c.strokeRect(nx, nz, len * TW / 2 * 0.4, 9);
+        c.fillStyle = '#e8413a'; c.beginPath(); c.arc(nx + len * TW / 2 * 0.2, nz + 1, 1.2, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#6b4a3a'; c.font = '700 5.5px ui-sans-serif, system-ui, sans-serif'; c.fillText(txt, nx + len * TW / 2 * 0.2, nz + 5.3);
+      });
+      c.restore();
+    }
+
     // Christmas on the walls: a fluffy garland with red bows along the top of
     // both walls, big glowing bulbs on it, wreaths, and a MERRY XMAS banner.
     xmasWalls() {
@@ -1326,9 +1689,11 @@
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
       const cols = ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
+      // In the village the garland drapes along the fence instead of the ceiling.
+      const VIL = this.pal.cute, TOP = VIL ? 1.0 : WALL_H, SAG = VIL ? 0.1 : 0.2;
       const run = (len, at, seed) => {
         const pts = [];
-        for (let u = 0.15; u <= len - 0.1; u += 0.12) pts.push([u, WALL_H - 0.18 - Math.sin(((u - 0.15) % 1.2) / 1.2 * Math.PI) * 0.2]);
+        for (let u = 0.15; u <= len - 0.1; u += 0.12) pts.push([u, TOP - 0.18 - Math.sin(((u - 0.15) % 1.2) / 1.2 * Math.PI) * SAG]);
         // fluffy green garland
         for (const [u, z] of pts) {
           const q = at(u, z);
@@ -1337,7 +1702,7 @@
         }
         // red bows where the garland is pinned up
         for (let u = 0.15; u <= len - 0.1; u += 1.2) {
-          const q = at(u, WALL_H - 0.16);
+          const q = at(u, TOP - 0.16);
           c.fillStyle = '#e8413a';
           c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - 5, q.y - 3); c.lineTo(q.x - 5, q.y + 3); c.closePath(); c.fill();
           c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x + 5, q.y - 3); c.lineTo(q.x + 5, q.y + 3); c.closePath(); c.fill();
@@ -1374,15 +1739,15 @@
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(-r * 0.7, r * 0.5); cc.lineTo(-r * 0.7, r * 1.4); cc.closePath(); cc.fill();
         cc.beginPath(); cc.moveTo(0, r); cc.lineTo(r * 0.7, r * 0.5); cc.lineTo(r * 0.7, r * 1.4); cc.closePath(); cc.fill();
       });
-      wreath('x0', this.plan.door.y, 1.3, 7);
-      for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, 1.45, 6);
-      wreath('x0', 3.5, 1.5, 7);
+      wreath('x0', this.plan.door.y, VIL ? 1.25 : 1.3, 7);
+      for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, VIL ? 0.5 : 1.45, 6);
+      wreath('x0', 3.5, VIL ? 0.5 : 1.5, 7);
       // MERRY XMAS banner of little flags on the left wall
       const word = 'MERRY XMAS';
       const y0 = 5.6, step = 0.32;
       for (let k = 0; k < word.length; k++) {
         if (word[k] === ' ') continue;
-        const yy = y0 + k * step, zz = 1.9 - Math.sin((k / (word.length - 1)) * Math.PI) * 0.15;
+        const yy = y0 + k * step, zz = (VIL ? 1.3 : 1.9) - Math.sin((k / (word.length - 1)) * Math.PI) * 0.15;
         this.onWall('x0', yy, zz, (cc) => {
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
@@ -2277,6 +2642,11 @@
         }
         case 'hop': dy -= Math.abs(Math.sin(t * 4.5 + p.phase)) * 9; sq = 1 + Math.sin(t * 9 + p.phase) * 0.04; break;
         case 'snack': dy -= Math.max(0, Math.sin(t * 7 + p.phase)) * 1.5; sq = 1 + Math.sin(t * 7 + p.phase) * 0.025; break;
+        case 'weed': {
+          // crouch, tug, pop up again
+          const k = Math.max(0, Math.sin(t * 2.4 + p.phase));
+          sq = 0.9 + (1 - k) * 0.06; dy += 2 - k * 3; tilt = Math.sin(t * 2.4 + p.phase) * 0.12; break;
+        }
         case 'scroll': tilt = 0.1 + Math.sin(t * 0.7 + p.phase) * 0.03; break;
         case 'coffee': case 'water': case 'read': case 'phone': case 'whiteboard':
           tilt = Math.sin(t * 0.9 + p.phase) * 0.05; break;
