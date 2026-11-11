@@ -2921,12 +2921,16 @@
       const c = this.ctx;
       const w = Math.max(10, W * 0.42), h = w * 0.8, flop = Math.sin(t * 2) * 1.5;
       const y0 = top + w * 0.12;
-      c.fillStyle = '#e02b2b';
+      const paper = this.plan && this.plan.paper, pen = 'rgba(112,88,74,.8)';
+      c.fillStyle = paper ? '#e38f80' : '#e02b2b';
       c.beginPath(); c.moveTo(-w / 2, y0); c.quadraticCurveTo(-w * 0.2, y0 - h, w * 0.55 + flop, y0 - h * 0.55); c.lineTo(w / 2, y0); c.closePath(); c.fill();
-      c.strokeStyle = '#9b1414'; c.lineWidth = 0.7; c.stroke();
-      c.fillStyle = '#ffffff';
+      c.strokeStyle = paper ? pen : '#9b1414'; c.lineWidth = paper ? 0.9 : 0.7; c.stroke();
+      if (paper) { c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(-w * 0.12, y0 - h * 0.42, w * 0.12, h * 0.18, -0.5, 0, Math.PI * 2); c.fill(); }
+      c.fillStyle = paper ? '#faf6ed' : '#ffffff';
       c.beginPath(); c.ellipse(0, y0, w * 0.58, w * 0.16, 0, 0, Math.PI * 2); c.fill();
+      if (paper) { c.strokeStyle = pen; c.lineWidth = 0.8; c.stroke(); }
       c.beginPath(); c.arc(w * 0.55 + flop, y0 - h * 0.55, w * 0.14, 0, Math.PI * 2); c.fill();
+      if (paper) c.stroke();
     }
 
     // A short run of twinkling colored bulbs along a divider top (x direction).
@@ -2975,28 +2979,41 @@
       const P = (a, b, cc) => this.iso(a, b, cc);
       const c = this.ctx, t = this.t / 1000;
       const b = P(x, y, 0);
-      const ink = this.pal.ink || '#5b4032';
-      c.fillStyle = 'rgba(0,0,0,.08)'; c.beginPath(); c.ellipse(b.x, b.y, 18, 7, 0, 0, Math.PI * 2); c.fill();
-      const ball = (yy, r) => { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(b.x, yy, r, 0, Math.PI * 2); c.fill(); c.strokeStyle = ink; c.lineWidth = 1; c.stroke(); };
+      const paper = this.plan && this.plan.paper;
+      const ink = paper ? 'rgba(112,88,74,.8)' : (this.pal.ink || '#5b4032');
+      const K = paper
+        ? { snow: '#fffdf8', btn: '#e38f80', eye: '#70584a', nose: '#e7a86b', cheek: '#f2c4bc', scarfA: '#e38f80', scarfB: '#9cbc95', arm: '#a07a5a', hat: '#8c7a6e', band: '#e38f80', cone: '#e38f80', trim: '#faf6ed' }
+        : { snow: '#ffffff', btn: '#e8413a', eye: '#2a2018', nose: '#f08a3a', cheek: '#f6a8b8', scarfA: '#d42a2a', scarfB: '#2fa36b', arm: '#7a4a2e', hat: '#2a2a2e', band: '#d42a2a', cone: '#d42a2a', trim: '#fff' };
+      c.fillStyle = paper ? 'rgba(112,88,74,.1)' : 'rgba(0,0,0,.08)'; c.beginPath(); c.ellipse(b.x, b.y, 18, 7, 0, 0, Math.PI * 2); c.fill();
+      const ball = (yy, r) => {
+        c.fillStyle = K.snow; c.beginPath(); c.arc(b.x, yy, r, 0, Math.PI * 2); c.fill();
+        if (paper) { c.fillStyle = 'rgba(190,200,225,.35)'; c.beginPath(); c.ellipse(b.x + r * 0.3, yy + r * 0.35, r * 0.6, r * 0.45, -0.3, 0, Math.PI * 2); c.fill(); }
+        c.strokeStyle = ink; c.lineWidth = 1; c.beginPath(); c.arc(b.x, yy, r, 0, Math.PI * 2); c.stroke();
+      };
       ball(b.y - 14, 16); ball(b.y - 38, 12); ball(b.y - 56, 9);
       // buttons, face, carrot nose
-      c.fillStyle = '#e8413a'; for (const yy of [-30, -40]) { c.beginPath(); c.arc(b.x, b.y + yy, 1.8, 0, Math.PI * 2); c.fill(); }
-      c.fillStyle = '#2a2018'; c.beginPath(); c.arc(b.x - 3, b.y - 58, 1.3, 0, Math.PI * 2); c.arc(b.x + 3, b.y - 58, 1.3, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#f08a3a'; c.beginPath(); c.moveTo(b.x, b.y - 55); c.lineTo(b.x + 8, b.y - 53.5); c.lineTo(b.x, b.y - 52.5); c.closePath(); c.fill();
-      c.fillStyle = '#f6a8b8'; c.beginPath(); c.arc(b.x - 6, b.y - 53, 1.8, 0, Math.PI * 2); c.arc(b.x + 6, b.y - 53, 1.8, 0, Math.PI * 2); c.fill();
+      c.fillStyle = K.btn; for (const yy of [-30, -40]) { c.beginPath(); c.arc(b.x, b.y + yy, 1.8, 0, Math.PI * 2); c.fill(); }
+      c.fillStyle = K.eye; c.beginPath(); c.arc(b.x - 3, b.y - 58, 1.3, 0, Math.PI * 2); c.arc(b.x + 3, b.y - 58, 1.3, 0, Math.PI * 2); c.fill();
+      c.fillStyle = K.nose; c.beginPath(); c.moveTo(b.x, b.y - 55); c.lineTo(b.x + 8, b.y - 53.5); c.lineTo(b.x, b.y - 52.5); c.closePath(); c.fill();
+      c.fillStyle = K.cheek; c.beginPath(); c.arc(b.x - 6, b.y - 53, 1.8, 0, Math.PI * 2); c.arc(b.x + 6, b.y - 53, 1.8, 0, Math.PI * 2); c.fill();
       // scarf
-      c.fillStyle = hat === 'top' ? '#d42a2a' : '#2fa36b';
+      c.fillStyle = hat === 'top' ? K.scarfA : K.scarfB;
       c.beginPath(); c.ellipse(b.x, b.y - 47, 10, 3, 0, 0, Math.PI * 2); c.fill();
+      if (paper) { c.strokeStyle = ink; c.lineWidth = 0.7; c.stroke(); }
       c.fillRect(b.x + 3, b.y - 47, 4, 12 + Math.sin(t * 2) * 1);
+      if (paper) c.strokeRect(b.x + 3, b.y - 47, 4, 12 + Math.sin(t * 2) * 1);
       // stick arms
-      c.strokeStyle = '#7a4a2e'; c.lineWidth = 1.5;
+      c.strokeStyle = K.arm; c.lineWidth = 1.5;
       c.beginPath(); c.moveTo(b.x - 11, b.y - 40); c.lineTo(b.x - 24, b.y - 50); c.moveTo(b.x + 11, b.y - 40); c.lineTo(b.x + 24, b.y - 48 + Math.sin(t * 3) * 2); c.stroke();
       if (hat === 'top') {
-        c.fillStyle = '#2a2a2e'; c.fillRect(b.x - 11, b.y - 65, 22, 3); c.fillRect(b.x - 7, b.y - 78, 14, 14);
-        c.fillStyle = '#d42a2a'; c.fillRect(b.x - 7, b.y - 68, 14, 3);
+        c.fillStyle = K.hat; c.fillRect(b.x - 11, b.y - 65, 22, 3); c.fillRect(b.x - 7, b.y - 78, 14, 14);
+        c.fillStyle = K.band; c.fillRect(b.x - 7, b.y - 68, 14, 3);
+        if (paper) { c.strokeStyle = ink; c.lineWidth = 0.8; c.strokeRect(b.x - 11, b.y - 65, 22, 3); c.strokeRect(b.x - 7, b.y - 78, 14, 13); }
       } else {
-        c.fillStyle = '#d42a2a'; c.beginPath(); c.moveTo(b.x - 9, b.y - 62); c.lineTo(b.x + 9, b.y - 62); c.lineTo(b.x + 12, b.y - 78); c.closePath(); c.fill();
-        c.fillStyle = '#fff'; c.fillRect(b.x - 10, b.y - 64, 20, 4); c.beginPath(); c.arc(b.x + 12, b.y - 78, 3, 0, Math.PI * 2); c.fill();
+        c.fillStyle = K.cone; c.beginPath(); c.moveTo(b.x - 9, b.y - 62); c.lineTo(b.x + 9, b.y - 62); c.lineTo(b.x + 12, b.y - 78); c.closePath(); c.fill();
+        if (paper) { c.strokeStyle = ink; c.lineWidth = 0.8; c.stroke(); }
+        c.fillStyle = K.trim; c.fillRect(b.x - 10, b.y - 64, 20, 4); c.beginPath(); c.arc(b.x + 12, b.y - 78, 3, 0, Math.PI * 2); c.fill();
+        if (paper) { c.strokeRect(b.x - 10, b.y - 64, 20, 4); c.beginPath(); c.arc(b.x + 12, b.y - 78, 3, 0, Math.PI * 2); c.stroke(); }
       }
     }
 
