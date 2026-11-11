@@ -1217,7 +1217,7 @@
       let tree = null;
       if (XMAS) {
         tree = { x: tx, y: ty };
-        add(tx + ty + 0.3, () => this.paperTree(tx, ty));
+        add(tx + ty + 0.3, () => this.photoTree(tx, ty));
         poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
         poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
         poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
@@ -1833,7 +1833,7 @@
 
     drawRoom() {
       if (BARE) return;
-      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.xmasWalls(); return; }
+      if (this.plan.paper) { this.paperRoom(); if (XMAS) { this.photoWalls(); this.xmasBunting(); } return; }
       if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
@@ -2359,6 +2359,13 @@
       for (let k = 0; k < windows.length - 1; k++) wreath('y0', windows[k] + 1.95, VIL ? 0.5 : 1.45, 6);
       wreath('x0', PAPER ? 3.2 : 3.5, PAPER ? 0.8 : VIL ? 0.5 : 1.5, 7);
       if (PAPER) for (const u of [4.45, 9.2]) wreath('y0', u, 0.85, 6.5); // between the framed paintings
+      this.xmasBunting();
+    }
+
+    xmasBunting() {
+      const PAPER = !!this.plan.paper, VIL = this.pal.cute;
+      const pen = 'rgba(112,88,74,.7)';
+      const cols = PAPER ? ['#d64541', '#f2c230', '#3d7d4b', '#d64541', '#e9b53b', '#3d7d4b'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
       // MERRY XMAS banner of little flags on the left wall
       const word = 'MERRY XMAS';
       const y0 = 5.6, step = 0.32;
@@ -2369,7 +2376,7 @@
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
           if (PAPER) { cc.strokeStyle = pen; cc.lineWidth = 0.6; cc.stroke(); }
-          cc.fillStyle = PAPER && k % 6 === 5 ? '#70584a' : '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
+          cc.fillStyle = '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
           cc.fillText(word[k], 0, -1.5);
         });
       }
@@ -2904,6 +2911,213 @@
       gift(x - 0.05, y + 0.75, 0.34, 'rgba(242,194,48,1)', '#d64541');
       gift(x + 0.95, y - 0.2, 0.36, 'rgba(255,248,234,1)', '#d64541');
       gift(x - 1.1, y + 0.05, 0.32, 'rgba(91,143,201,1)', '#fff8ea');
+    }
+
+    // ---- Christmas like the reference photos (paper office): a lush, lightly
+    // snowed fir glowing with warm fairy lights, red velvet bows, glossy red and
+    // gold baubles and a red star; fir garlands with bows and warm lights, and
+    // lush wreaths with a big bow and two gold bells. Brown pen lines throughout.
+
+    bauble(x, y, r, col) {
+      const c = this.ctx;
+      const g = c.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.1, x, y, r);
+      g.addColorStop(0, col === 'gold' ? '#fff1b8' : '#ff9a8a');
+      g.addColorStop(0.45, col === 'gold' ? '#e9b53b' : '#d2322f');
+      g.addColorStop(1, col === 'gold' ? '#a8761a' : '#8e1b1d');
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(90,60,40,.55)'; c.lineWidth = 0.6; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.ellipse(x - r * 0.38, y - r * 0.42, r * 0.28, r * 0.17, -0.6, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#c9a24c'; c.fillRect(x - r * 0.25, y - r - 1.2, r * 0.5, 1.6);
+    }
+
+    velvetBow(x, y, s) {
+      const c = this.ctx, pen = 'rgba(110,30,30,.9)';
+      c.save(); c.translate(x, y); c.scale(s, s); c.lineJoin = 'round';
+      // tails
+      for (const d of [-1, 1]) {
+        c.beginPath(); c.moveTo(d * 1, 1); c.quadraticCurveTo(d * 3, 7, d * 2, 13); c.lineTo(d * 4.5, 11.5); c.lineTo(d * 5.5, 14); c.quadraticCurveTo(d * 6, 7, d * 2.5, 0.5); c.closePath();
+        c.fillStyle = '#b52a2a'; c.fill(); c.strokeStyle = pen; c.lineWidth = 0.7; c.stroke();
+      }
+      // loops
+      for (const d of [-1, 1]) {
+        c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(d * 4, -7, d * 11, -5, d * 9, 1); c.bezierCurveTo(d * 8, 4, d * 3, 3, 0, 0);
+        const g = c.createLinearGradient(0, -6, 0, 4); g.addColorStop(0, '#e2463f'); g.addColorStop(1, '#a3221f');
+        c.fillStyle = g; c.fill(); c.strokeStyle = pen; c.lineWidth = 0.7; c.stroke();
+        c.strokeStyle = 'rgba(255,200,190,.55)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(d * 3, -3); c.quadraticCurveTo(d * 6, -5, d * 8, -2.5); c.stroke();
+      }
+      c.fillStyle = '#c62f2f'; c.beginPath(); c.ellipse(0, 0, 2.4, 2.8, 0, 0, Math.PI * 2); c.fill(); c.strokeStyle = pen; c.stroke();
+      c.restore();
+    }
+
+    photoTree(x, y) {
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const c = this.ctx, t = this.t / 1000;
+      const pen = 'rgba(70,55,40,.75)';
+      const rnd = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+      const gift = (gx, gy, s, col, rib) => {
+        const h = s * 0.8;
+        this.box(gx, gy, 0, s, s, h, this.shade(col, 14), col, this.shade(col, -18));
+        c.strokeStyle = rib; c.lineWidth = 1.8;
+        const a0 = P(gx + s / 2, gy, h), a1 = P(gx + s / 2, gy + s, h), a2 = P(gx + s / 2, gy + s, 0);
+        c.beginPath(); c.moveTo(a0.x, a0.y); c.lineTo(a1.x, a1.y); c.lineTo(a2.x, a2.y); c.stroke();
+        const b0 = P(gx, gy + s / 2, h), b1 = P(gx + s, gy + s / 2, h), b2 = P(gx + s, gy + s / 2, 0);
+        c.beginPath(); c.moveTo(b0.x, b0.y); c.lineTo(b1.x, b1.y); c.lineTo(b2.x, b2.y); c.stroke();
+        const top = P(gx + s / 2, gy + s / 2, h);
+        this.velvetBow(top.x, top.y - 1, 0.45);
+      };
+      const base = P(x, y, 0.42);
+      // big warm glow
+      const gl = c.createRadialGradient(base.x, base.y - 85, 10, base.x, base.y - 85, 150);
+      gl.addColorStop(0, 'rgba(255,205,110,.42)'); gl.addColorStop(1, 'rgba(255,205,110,0)');
+      c.fillStyle = gl; c.beginPath(); c.arc(base.x, base.y - 85, 150, 0, Math.PI * 2); c.fill();
+      gift(x - 1.0, y - 0.7, 0.46, 'rgba(200,52,48,1)', '#f2c230');
+      gift(x + 0.3, y - 1.0, 0.4, 'rgba(250,244,230,1)', '#c62f2f');
+      // woven basket + trunk
+      this.box(x - 0.32, y - 0.32, 0, 0.64, 0.64, 0.34, '#d8bd98', '#c9a983', '#b8956d');
+      const bq = P(x, y + 0.32, 0.17);
+      c.strokeStyle = 'rgba(90,60,40,.35)'; c.lineWidth = 0.8;
+      for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(bq.x + k * 6 - 3, bq.y - 6 + k * 3); c.lineTo(bq.x + k * 6 + 3, bq.y + 4 + k * 3); c.stroke(); }
+      this.box(x - 0.09, y - 0.09, 0.34, 0.18, 0.18, 0.14, '#8a6648', '#7a5a40', '#6a4c36');
+      // lush tiers: a dark silhouette, then layers of needle fronds, snow on the tips
+      const tiers = [[88, 46, 0], [76, 42, 30], [64, 38, 58], [52, 34, 84], [40, 30, 106], [28, 26, 126]];
+      const tri = [];
+      tiers.forEach(([hw, h, up], i) => {
+        const bx = base.x, by = base.y - up, top = by - h - 14;
+        tri.push({ bx, by, hw, top });
+        c.fillStyle = '#2f6b40';
+        c.beginPath(); c.moveTo(bx - hw, by);
+        for (let k = 0; k <= 10; k++) { const px = bx - hw + (2 * hw) * k / 10; c.quadraticCurveTo(px - hw / 10, by + 7, px, by); }
+        c.lineTo(bx, top); c.closePath(); c.fill();
+        c.strokeStyle = pen; c.lineWidth = 1.1; c.stroke();
+        // fronds: little fans of needles all over, lighter towards the front/left
+        let n = i * 300;
+        const cnt = Math.round(hw * 0.9);
+        for (let k = 0; k < cnt; k++, n++) {
+          const g = rnd(n) * 0.95, w = hw * (1 - g) * 0.95, fx = bx - w + rnd(n + 1) * w * 2, fy = by - 2 - (by - top) * g * 0.95;
+          const len = 4 + rnd(n + 2) * 4, ang = Math.PI / 2 + (fx - bx) / hw * 0.6;
+          const light = rnd(n + 3);
+          c.strokeStyle = light > 0.66 ? '#6fae72' : light > 0.33 ? '#4e9058' : '#3d7d4b'; c.lineWidth = 1.1; c.lineCap = 'round';
+          c.beginPath();
+          for (const da of [-0.5, -0.2, 0.15, 0.45]) { c.moveTo(fx, fy); c.lineTo(fx + Math.cos(ang + da) * len, fy + Math.sin(ang + da) * len); }
+          c.stroke();
+          if (rnd(n + 4) > 0.8) { c.fillStyle = 'rgba(255,255,255,.92)'; c.beginPath(); c.ellipse(fx + 1, fy - 0.5, 2.6, 1.3, 0, 0, Math.PI * 2); c.fill(); }
+        }
+        // snow along the hem
+        c.fillStyle = 'rgba(255,255,255,.9)';
+        for (let k = 0; k < 10; k++) { if (rnd(i * 40 + k) < 0.45) continue; const px = bx - hw + (2 * hw) * (k + 0.5) / 10; c.beginPath(); c.ellipse(px, by - 2, hw / 14, 2.2, 0, Math.PI, 0); c.fill(); }
+      });
+      const at = (i, f, g) => { const q = tri[i]; const w = q.hw * (1 - g) * 0.9; return { x: q.bx - w + 2 * w * f, y: q.by - 4 - (q.by - q.top) * g * 0.85 }; };
+      // dense warm fairy lights
+      let n = 0;
+      for (let i = 0; i < tri.length; i++) {
+        for (let k = 0; k < 46 - i * 6; k++, n++) {
+          const q = at(i, rnd(n + 500), rnd(n + 1500) * 0.92);
+          const tw = 0.5 + 0.5 * Math.sin(t * (1.6 + rnd(n + 7) * 2.6) + n);
+          c.globalAlpha = 0.28 + 0.45 * tw; c.fillStyle = '#ffd36e'; c.beginPath(); c.arc(q.x, q.y, 3.4, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 0.8 + 0.2 * tw; c.fillStyle = '#fff8dc'; c.beginPath(); c.arc(q.x, q.y, 1.15, 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.globalAlpha = 1;
+      // glossy red and gold baubles
+      n = 0;
+      for (let i = 0; i < tri.length; i++) {
+        const count = 7 - Math.floor(i / 1.2);
+        for (let k = 0; k < count; k++, n++) {
+          const q = at(i, (k + 0.5) / count + (rnd(n + 50) - 0.5) * 0.08, 0.08 + rnd(n + 77) * 0.32);
+          this.bauble(q.x, q.y, 4.6 - i * 0.35, n % 3 === 1 ? 'gold' : 'red');
+        }
+      }
+      // red velvet bows
+      [[0, 0.2, 0.32], [0, 0.8, 0.28], [1, 0.5, 0.45], [2, 0.18, 0.3], [2, 0.82, 0.34], [3, 0.5, 0.35], [4, 0.28, 0.3], [4, 0.75, 0.32]]
+        .forEach(([i, f, g]) => { const q = at(i, f, g); this.velvetBow(q.x, q.y, 0.75 - i * 0.05); });
+      // red star with gold edge
+      const TOP = 126 + 26 + 14, sx = base.x, sy = base.y - TOP - 6, r = 14 + Math.sin(t * 2) * 0.8;
+      const sg = c.createRadialGradient(sx, sy, 0, sx, sy, 36);
+      sg.addColorStop(0, 'rgba(255,205,120,.8)'); sg.addColorStop(1, 'rgba(255,205,120,0)');
+      c.fillStyle = sg; c.beginPath(); c.arc(sx, sy, 36, 0, Math.PI * 2); c.fill();
+      const star = (rr) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? rr * 0.46 : rr; c.lineTo(sx + Math.cos(a) * q, sy + Math.sin(a) * q); } c.closePath(); };
+      star(r); const sgr = c.createLinearGradient(sx, sy - r, sx, sy + r); sgr.addColorStop(0, '#ef5b4f'); sgr.addColorStop(1, '#a8211f');
+      c.fillStyle = sgr; c.fill(); c.strokeStyle = '#f2c230'; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+      c.strokeStyle = pen; c.lineWidth = 0.6; c.stroke();
+      for (let k = 0; k < 6; k++) { const a = t * 1.3 + k * 1.05, q = r * 0.55; c.fillStyle = 'rgba(255,245,210,.95)'; c.beginPath(); c.arc(sx + Math.cos(a) * q, sy + Math.sin(a) * q, 0.9, 0, Math.PI * 2); c.fill(); }
+      // presents in front
+      gift(x + 0.45, y + 0.35, 0.48, 'rgba(250,244,230,1)', '#c62f2f');
+      gift(x - 0.6, y + 0.45, 0.42, 'rgba(200,52,48,1)', '#f2c230');
+      gift(x - 0.05, y + 0.75, 0.34, 'rgba(233,181,59,1)', '#c62f2f');
+      gift(x + 0.95, y - 0.2, 0.36, 'rgba(62,120,80,1)', '#f2c230');
+      gift(x - 1.1, y + 0.05, 0.32, 'rgba(200,52,48,1)', '#fff8ea');
+    }
+
+    photoWalls() {
+      const { W, D } = this.plan;
+      const P = (a, b, cc) => this.iso(a, b, cc);
+      const c = this.ctx, t = this.t / 1000, WH = this.plan.WH;
+      const dy = this.plan.door.y;
+      const rnd = (n) => { const v = Math.sin(n * 91.7 + 13.1) * 43758.5453; return v - Math.floor(v); };
+      // lush fir garland swagged along the top of both walls
+      const run = (len, at, seed, skip) => {
+        const span = 1.4;
+        for (let u0 = 0.05; u0 < len - 0.1; u0 += span) {
+          const u1 = Math.min(len - 0.05, u0 + span);
+          if (skip && u1 > skip[0] && u0 < skip[1]) continue;
+          const zAt = (u) => WH + 0.02 - Math.sin(((u - u0) / (u1 - u0)) * Math.PI) * 0.2;
+          let n = Math.floor(u0 * 100) + seed * 1000;
+          for (let u = u0; u <= u1; u += 0.07, n++) {
+            const q = at(u, zAt(u));
+            c.fillStyle = rnd(n) > 0.5 ? '#3d7d4b' : '#2f6b40'; c.beginPath(); c.arc(q.x, q.y, 3.6, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = rnd(n + 1) > 0.5 ? '#6fae72' : '#4e9058'; c.lineWidth = 1; c.lineCap = 'round';
+            c.beginPath(); for (const a of [0.3, 1.6, 2.9, 4.4]) { const aa = a + rnd(n + 2); c.moveTo(q.x, q.y); c.lineTo(q.x + Math.cos(aa) * 5, q.y + Math.sin(aa) * 3.5); } c.stroke();
+            if (rnd(n + 3) > 0.85) { c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.ellipse(q.x, q.y - 2.5, 2.4, 1.1, 0, 0, Math.PI * 2); c.fill(); }
+          }
+          // warm white lights along the swag
+          for (let u = u0 + 0.12; u < u1; u += 0.22, n++) {
+            const q = at(u, zAt(u) - 0.03), tw = 0.5 + 0.5 * Math.sin(t * 2 + n);
+            c.globalAlpha = 0.3 + 0.4 * tw; c.fillStyle = '#ffd36e'; c.beginPath(); c.arc(q.x, q.y + 1, 3.6, 0, Math.PI * 2); c.fill();
+            c.globalAlpha = 0.85 + 0.15 * tw; c.fillStyle = '#fff8dc'; c.beginPath(); c.arc(q.x, q.y + 1, 1.2, 0, Math.PI * 2); c.fill();
+            c.globalAlpha = 1;
+          }
+          // a gold bauble hanging mid-swag, red velvet bows where it's pinned up
+          const mq = at((u0 + u1) / 2, zAt((u0 + u1) / 2) - 0.12);
+          c.strokeStyle = 'rgba(160,120,60,.8)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(mq.x, mq.y - 4); c.lineTo(mq.x, mq.y); c.stroke();
+          this.bauble(mq.x, mq.y + 3, 3.2, Math.round(u0 / span) % 2 ? 'gold' : 'red');
+          const pq = at(u0, zAt(u0));
+          this.velvetBow(pq.x, pq.y - 1, 0.55);
+        }
+      };
+      run(W, (u, z) => P(u, 0, z), 0);
+      run(D, (u, z) => P(0, u, z), 1, [dy - 0.75, dy + 0.75]);
+      // lush wreaths with a big red bow and two gold bells
+      const wreath = (dir, a, z, r) => {
+        this.onWall(dir, a, z, (cc) => {
+          let n = Math.floor(a * 37 + z * 11);
+          for (let k = 0; k < 40; k++, n++) {
+            const ang = rnd(n) * Math.PI * 2, rr = r * (0.75 + rnd(n + 1) * 0.5), x0 = Math.cos(ang) * rr, y0 = Math.sin(ang) * rr;
+            cc.strokeStyle = rnd(n + 2) > 0.5 ? '#3d7d4b' : rnd(n + 3) > 0.5 ? '#2f6b40' : '#6fae72'; cc.lineWidth = 1.3; cc.lineCap = 'round';
+            cc.beginPath(); const tang = ang + Math.PI / 2; cc.moveTo(x0 - Math.cos(tang) * 3, y0 - Math.sin(tang) * 3); cc.lineTo(x0 + Math.cos(tang) * 3, y0 + Math.sin(tang) * 3); cc.stroke();
+          }
+          // pinecones and berry clusters
+          for (const ang of [0.9, 2.5, 4.1, 5.5]) {
+            const x0 = Math.cos(ang) * r, y0 = Math.sin(ang) * r;
+            cc.fillStyle = '#8a5a3a'; cc.beginPath(); cc.ellipse(x0, y0, 1.6, 2.4, ang, 0, Math.PI * 2); cc.fill();
+            cc.fillStyle = '#c62f2f'; for (const [ox, oy] of [[2.4, 0.8], [3.4, -0.6], [2.8, 1.9]]) { cc.beginPath(); cc.arc(x0 + ox, y0 + oy, 1.1, 0, Math.PI * 2); cc.fill(); }
+          }
+          cc.fillStyle = 'rgba(255,255,255,.85)'; for (const ang of [3.6, 4.6, 5.3]) { cc.beginPath(); cc.ellipse(Math.cos(ang) * r, Math.sin(ang) * r - 1, 2.2, 1, 0, 0, Math.PI * 2); cc.fill(); }
+        });
+        // bells and bow drawn upright under the wreath
+        const q = dir === 'y0' ? P(a, 0, z) : P(0, a, z);
+        for (const d of [-1, 1]) {
+          const bx = q.x + d * 2.6, by = q.y + r + 4;
+          c.strokeStyle = 'rgba(160,30,30,.9)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(q.x, q.y + r * 0.9); c.lineTo(bx, by - 3); c.stroke();
+          const g = c.createLinearGradient(bx - 3, by, bx + 3, by); g.addColorStop(0, '#fff1b8'); g.addColorStop(0.5, '#e9b53b'); g.addColorStop(1, '#a8761a');
+          c.fillStyle = g; c.beginPath(); c.moveTo(bx - 3.4, by + 3); c.quadraticCurveTo(bx - 3, by - 3.5, bx, by - 3.5); c.quadraticCurveTo(bx + 3, by - 3.5, bx + 3.4, by + 3); c.closePath(); c.fill();
+          c.strokeStyle = 'rgba(90,60,30,.7)'; c.lineWidth = 0.5; c.stroke();
+          c.fillStyle = '#8a6420'; c.beginPath(); c.arc(bx, by + 3.4, 1, 0, Math.PI * 2); c.fill();
+        }
+        this.velvetBow(q.x, q.y + r * 0.85, 0.7);
+      };
+      wreath('x0', dy, 1.62, 8);
+      wreath('x0', 3.2, 0.72, 7.5);
+      for (const u of [4.45, 9.2]) wreath('y0', u, 0.78, 7.5);
     }
 
     // Claw machine full of plushies.
