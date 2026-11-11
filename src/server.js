@@ -123,10 +123,16 @@ const isHidden = (s) => {
   return at != null && (s.lastEventAt || s.mtime || 0) <= at;
 };
 
+// Names the user gave sessions in the agent panel (instead of the folder name).
+const NAMES_FILE = path.join(__dirname, '..', '.names.json');
+let names = {};
+try { names = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')) || {}; } catch { /* none yet */ }
+
 function snapshot(watcher, opts) {
   const now = Date.now();
   const raw = watcher.sessions().filter((s) => !isHidden(s));
   const sessions = raw.map((s) => view(s, now, opts));
+  for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; }
   sessions.sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
   return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: summary(sessions, now) };
 }
@@ -230,6 +236,16 @@ function createServer(watcher, opts, { onShutdown, onRestart } = {}) {
       if (!s) { res.writeHead(404).end(); return; }
       hiddenKeys[key] = s.lastEventAt || s.mtime || Date.now();
       try { fs.writeFileSync(HIDDEN_FILE, JSON.stringify(hiddenKeys)); } catch (e) { console.error('hide:', e.message); }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      push(true);
+    } else if (url.pathname === '/api/rename' && req.method === 'POST') {
+      if (req.headers['x-whatsmyagentdoing'] !== 'rename') { res.writeHead(403).end(); return; }
+      const key = String(url.searchParams.get('key') || '').slice(0, 300);
+      const name = String(url.searchParams.get('name') || '').trim().slice(0, 40);
+      if (!key) { res.writeHead(400).end(); return; }
+      if (name) names[key] = name; else delete names[key];
+      try { fs.writeFileSync(NAMES_FILE, JSON.stringify(names)); } catch (e) { console.error('rename:', e.message); }
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
       push(true);

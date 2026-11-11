@@ -227,7 +227,11 @@
     .side.opening .srow, .side.entering #detailBody > *, body.full.side-closed .side-tab { animation: none; }
   }
   .side-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
-  #detailTitle { display: flex; align-items: center; gap: 7px; }
+  #detailTitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  #detailTitle .dname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #detailTitle .rename { border: 0; background: none; cursor: pointer; font-size: 12px; padding: 2px; opacity: .55; }
+  #detailTitle .rename:hover { opacity: 1; }
+  #detailTitle input { font: inherit; width: 150px; padding: 2px 6px; border: 1.5px solid #6b4a3a; border-radius: 6px; background: #fff; color: #4a3428; }
   .side-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .side-count { color: var(--muted); font-size: 12px; }
   .icon-btn { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
@@ -1351,7 +1355,11 @@ function renderDetail(scrollDown) {
   const s = state.data.sessions.find((x) => x.key === sel);
   if (!s) { closeDetail(); return; }
   const now = Date.now() - state.skew;
-  document.getElementById('detailTitle').innerHTML = `${agentLogo(s.agent)}${esc(s.project || AGENT_NAME[s.agent] || s.agent)}`;
+  const titleEl = document.getElementById('detailTitle');
+  if (!titleEl.querySelector('input')) {
+    const th = `${agentLogo(s.agent)}<span class="dname">${esc(s.project || AGENT_NAME[s.agent] || s.agent)}</span><button class="rename" data-rename="${esc(s.key)}" title="이름 바꾸기">✏️</button>`;
+    if (titleEl.dataset.html !== th) { titleEl.innerHTML = th; titleEl.dataset.html = th; }
+  }
   // Fetch again whenever the agent logged something new.
   if (convo.at !== s.lastEventAt && !convo.busy) loadConvo(s);
   const body = document.getElementById('detailBody');
@@ -1401,6 +1409,28 @@ async function loadConvo(s) {
 }
 
 document.getElementById('sideHide').addEventListener('click', () => setSide(false));
+// Rename a session: the name shows on its label instead of the folder name.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('[data-rename]'); if (!b) return;
+  e.stopPropagation();
+  const key = b.dataset.rename, t = document.getElementById('detailTitle');
+  const s = state.data.sessions.find((x) => x.key === key); if (!s) return;
+  const span = t.querySelector('.dname');
+  const inp = document.createElement('input');
+  inp.value = s.renamed ? s.project : '';
+  inp.placeholder = s.folder || s.project || '이름';
+  inp.maxLength = 40;
+  span.replaceWith(inp); b.remove();
+  inp.focus(); inp.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return; done = true;
+    if (save) await fetch(`/api/rename?key=${encodeURIComponent(key)}&name=${encodeURIComponent(inp.value.trim())}`, { method: 'POST', headers: { 'x-whatsmyagentdoing': 'rename' } }).catch(() => null);
+    t.dataset.html = ''; inp.remove(); renderDetail();
+  };
+  inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') finish(true); if (ev.key === 'Escape') finish(false); });
+  inp.addEventListener('blur', () => finish(true));
+});
 // Take a session out of the office (a chat deleted in an app that leaves no trace).
 document.addEventListener('click', async (e) => {
   const b = e.target.closest?.('[data-hide]'); if (!b) return;
