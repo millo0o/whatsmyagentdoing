@@ -72,6 +72,7 @@
     couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
     beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
     window: WINTER ? [['❄️', '눈 구경 중'], ['⛰️', '경치 구경 중']] : [['⛰️', '경치 구경 중'], ['☁️', '구름 구경 중'], ['🌤️', '날씨 구경 중']],
+    tidy: [['🧽', '내가 치울게'], ['☕', '컵 여기 있었네'], ['🤔', '다 마셨나?']],
     claw: [['🧸', '인형 뽑는 중'], ['🧸', '한 판만 더'], ['😤', '집게 탓하는 중']],
     review: [['🔍', '검토 중'], ['📝', '리뷰 쓰는 중'], ['✅', '결과 확인 중'], ['🖍️', '빨간펜 드는 중']],
     cake: [['🍰', '케이크 고르는 중'], ['🍓', '딸기 케이크 먹는 중'], ['🧁', '컵케이크 먹는 중']],
@@ -508,6 +509,7 @@
       this.t = performance.now();
       this.pal = palette();
       this.plan = this.buildPlan(0);
+      this.mugs = [];
       // Two office cats: the ginger one and a calico.
       this.cats = [
         { x: this.plan.W - 3, y: this.plan.D - 2, path: [], until: 0, face: 1, coat: 'ginger' },
@@ -1172,10 +1174,11 @@
       // ---- coffee nook on the back wall between the two
       add(11.3 + 0.45, () => this.waterCooler(11.1, 0.22));
       solid(11.05, 0.2, 0.5, 0.5);
-      add(11.7 + 0.5 + 0.5, () => { this.paperCounter(11.65, 0.2, 1.15, 0.6); this.coffeeMachine(11.8, 0.25); });
-      solid(11.65, 0.2, 1.15, 0.6);
+      add(11.7 + 0.65 + 0.5, () => { this.paperCounter(11.65, 0.2, 1.3, 0.6); this.coffeeMachine(11.72, 0.25); this.sink(12.38, 0.25); });
+      solid(11.65, 0.2, 1.3, 0.6);
       poi(11.3, 1.1, 'water', 'back');
-      poi(12.2, 1.25, 'coffee', 'back', { w: 1.5 });
+      poi(11.95, 1.25, 'coffee', 'back', { w: 2.2 });
+      poi(12.65, 1.3, 'sink', 'back', { w: 0.3 });
 
       // ---- along the back-left wall: low bookshelf and the notice board
       add(0.3 + 1.0 + 1.2, () => this.lowShelfY(0.12, 0.9, 2.4));
@@ -1267,8 +1270,80 @@
       return {
         W, D, OW: W, OD: workBottom, MR: 0, PY: A, RW: 0, GX: W, pods: rows === 1 ? 2 : islands / 2 + 1,
         tree, washes, board, village: true, paper: true, WH: 1.25,
+        tables: [{ x: VX + 0.6, y: VY + 0.75, z: 0.79 }, { x: VX + 2.3, y: VY + 0.8, z: 0.79 }, { x: RX + 1.1, y: RY + 1.8, z: 0.3 }, { x: RX + 1.8, y: RY + 1.6, z: 0.3 }],
         grid, items, props, pois, desks, windows: [], posters: [], pp, door,
       };
+    }
+
+    // ---- coffee (GPT's spec): grab a mug at the machine, carry it around,
+    // stop now and then for a sip, and when it's empty either wash it at the
+    // sink or leave it on a desk/table/floor — someone else may tidy it later.
+
+    coffeeTick(p, now) {
+      const cup = p.cup;
+      if (!cup || cup.fill <= 0) return;
+      if (!cup.sipAt || now - cup.sipAt > 1600) {
+        if (now >= cup.nextSip && !p.leaving) { cup.sipAt = now; cup.nextSip = now + rand(12, 22) * 1000; }
+      }
+      if (cup.sipAt && now - cup.sipAt > 1550 && cup.counted !== cup.sipAt) {
+        cup.counted = cup.sipAt;
+        cup.fill = Math.max(0, cup.fill - 1 / cup.sips);
+      }
+    }
+
+    sipping(p, now = Date.now()) {
+      return !!(p.cup && p.cup.sipAt && now - p.cup.sipAt < 1550);
+    }
+
+    // Put an empty mug down somewhere near: a desk or table top if there is one
+    // close by, otherwise the floor beside them.
+    leaveMug(p, now) {
+      const spots = [];
+      for (const d of this.plan.desks) spots.push({ x: d.x + (d.side === 'n' ? 1.12 : 0.25), y: d.y + 0.4, z: 0.79, depth: d.x + 0.7 + d.y + 0.41 });
+      for (const t of this.plan.tables || []) spots.push({ ...t, depth: t.x + t.y + 0.05 });
+      let best = null, bd = 1.7;
+      for (const s of spots) {
+        const d = Math.hypot(s.x - p.x, s.y - p.y);
+        if (d < bd && !this.mugs.some((m) => Math.hypot(m.x - s.x, m.y - s.y) < 0.3)) { bd = d; best = s; }
+      }
+      if (!best) {
+        const fx = p.x + 0.3, fy = p.y + 0.25;
+        if (this.plan.grid.blocked(fx, fy)) return false;
+        best = { x: fx, y: fy, z: 0, depth: fx + fy };
+      }
+      this.mugs.push({ ...best, col: p.cup.col, at: now });
+      return true;
+    }
+
+    // A mug in screen space: (x, y) = bottom centre, s = scale (1 ≈ 40px sprite),
+    // handle on the right unless left; tilt in radians.
+    drawMug(x, y, s, col, opt = {}) {
+      const c = this.ctx, INK = '#70584a';
+      c.save(); c.translate(x, y); c.rotate(opt.tilt || 0); c.scale(opt.left ? -s : s, s);
+      if (opt.shadow) { c.globalAlpha = 0.1; c.fillStyle = INK; c.beginPath(); c.ellipse(0, 0.3, 3, 1, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+      c.lineWidth = 0.7 / s; c.strokeStyle = INK; c.lineJoin = 'round';
+      // handle
+      c.beginPath(); c.moveTo(3.5, -5.5); c.quadraticCurveTo(6.2, -5.6, 6, -3.6); c.quadraticCurveTo(5.8, -1.8, 3.5, -2); c.stroke();
+      // body
+      c.beginPath(); c.moveTo(-3.5, -7); c.lineTo(-3.5, -1); c.quadraticCurveTo(-3.5, 0, -2.5, 0); c.lineTo(2.5, 0); c.quadraticCurveTo(3.5, 0, 3.5, -1); c.lineTo(3.5, -7); c.closePath();
+      c.fillStyle = col; c.fill();
+      c.save(); c.clip(); c.fillStyle = '#e8d8c3'; c.globalAlpha = 0.8; c.fillRect(-4, -2.2, 8, 3); c.restore();
+      c.stroke();
+      // top
+      c.beginPath(); c.ellipse(0, -7, 3.5, 1.25, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.stroke();
+      if (opt.fill > 0) { c.fillStyle = '#94705a'; c.beginPath(); c.ellipse(0, -7, 2.5, 0.75, 0, 0, Math.PI * 2); c.fill(); }
+      else { c.fillStyle = '#e8d8c3'; c.beginPath(); c.ellipse(0, -7, 2.5, 0.75, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = 'rgba(112,88,74,.22)'; c.beginPath(); c.ellipse(0, -7.25, 2.5, 0.5, 0, Math.PI, 0); c.fill(); if (opt.residue) { c.globalAlpha = 0.3; c.fillStyle = '#94705a'; c.fillRect(-1, -7.3, 2, 0.8); c.globalAlpha = 1; } }
+      c.restore();
+      if (opt.steam) {
+        c.save(); c.strokeStyle = '#b7a596'; c.lineWidth = 0.7; c.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+          const k = ((this.t / 1000) / 1.9 + i * 0.5) % 1;
+          c.globalAlpha = 0.3 * (1 - k);
+          const sx = x + (i ? 1.2 : -1.2) * s, sy = y - 8 * s - k * 3 * s;
+          c.beginPath(); c.moveTo(sx, sy); c.quadraticCurveTo(sx + 1.2 * s, sy - 2 * s, sx, sy - 4 * s); c.stroke();
+        }
+        c.restore();
+      }
     }
 
     // Light snow falling only outside the office (GPT's spec): a few soft warm
@@ -1500,6 +1575,7 @@
       const pods = this.plan.pods || cap / 4;
       if (!this.plan.fixed && (working.length > cap - 1 || (pods > 2 && working.length < pods * 4 * 0.35))) {
         this.plan = this.buildPlan(working.length);
+        this.mugs = [];
         this.deskOf.clear();
         for (const p of this.people.values()) { p.poi = null; p.napDesk = null; p.desk = null; p.until = 0; }
       }
@@ -1607,6 +1683,7 @@
     }
 
     release(p) {
+      if (p.poi && p.poi.mug && p.poi.mug.tidier === p.key && p.poi.act === 'tidy' && this.mugs.includes(p.poi.mug)) p.poi.mug.tidier = null;
       if (p.poi && p.poi.cat && p.poi.cat.petBy === p.key) { p.poi.cat.petBy = null; p.poi.cat.until = Date.now() + rand(2000, 6000); }
       if (p.poi) { p.poi.taken = null; p.poi = null; }
       if (p.napDesk) { p.napDesk.napper = null; p.napDesk = null; }
@@ -1688,13 +1765,32 @@
     wander(p, now) {
       if (p.path.length) return;
       if (p.poi && now < p.until) return;
+      if (this.sipping(p, now)) return;
+      const done = p.poi;
+      if (done && done.act === 'tidy' && done.mug && this.mugs.includes(done.mug)) {
+        this.mugs.splice(this.mugs.indexOf(done.mug), 1);
+        p.cup = { fill: 0, col: done.mug.col, dirty: true };
+      }
       this.release(p);
       const plan = this.plan;
+      if (done && done.act === 'coffee' && !p.cup) {
+        p.cup = { fill: 1, sips: 3 + Math.floor(Math.random() * 3), nextSip: now + rand(4, 9) * 1000, got: now, col: Math.random() < 0.7 ? '#faf6ed' : pick(['#b8c7b0', '#e9b8aa'], p.h, 5) };
+      }
+      if (done && done.act === 'sink' && p.cup && p.cup.fill <= 0) p.cup = null;
+      // Empty mug: wash it, or (sometimes) just leave it somewhere.
+      if (p.cup && p.cup.fill <= 0) {
+        const sink = plan.pois.find((q) => q.act === 'sink' && !q.taken);
+        const lazy = !p.cup.dirty && Math.random() < 0.35 && this.mugs.length < 5;
+        if (lazy && this.leaveMug(p, now)) p.cup = null;
+        else if (sink) { sink.taken = p.key; p.poi = sink; p.until = Infinity; p.stay = rand(2, 4) * 1000; p.capSeed = Math.random(); this.goTo(p, sink); return; }
+      }
       const workingDesks = new Set([...this.deskOf.values()].map((i) => plan.desks[i]));
       const sleepy = p.s.status === 'idle';
       const weighted = [];
       for (const q of plan.pois) {
         if (q.taken) continue;
+        if (q.act === 'coffee' && p.cup) continue;
+        if (q.act === 'sink' && !(p.cup && p.cup.fill <= 0)) continue;
         let w = q.w || 1;
         if (q.pair) w = plan.pois.some((o) => o.pair === q.pair && o !== q && o.taken) ? 7 : 1.2;
         if (q.act === 'couch' || q.act === 'beanbag' || q.sleepy) w = sleepy ? 3 : 1.4;
@@ -1716,6 +1812,13 @@
           break;
         }
       }
+      // A mug someone left behind: tidy it up (hands free only).
+      if (!p.cup) for (const m of this.mugs || []) {
+        if (m.tidier || now - m.at < 20000) continue;
+        const tx = m.x + 0.45, ty = m.y + 0.4;
+        if (plan.grid.blocked(tx, ty)) continue;
+        weighted.push([{ x: tx, y: ty, act: 'tidy', face: 'back', mug: m }, 2.2]);
+      }
       // Something to do right where they are: dance, stretch, phone, a snack…
       for (let k = 0; k < 2; k++) {
         const fx = rand(1, plan.W - 1), fy = rand(1, plan.D - 1);
@@ -1728,10 +1831,11 @@
       for (const [q, w] of weighted) { r -= w; if (r <= 0) { choice = q; break; } }
       if (choice.desk) { choice.desk.napper = p.key; p.napDesk = choice.desk; }
       if (choice.cat) { choice.cat.petBy = p.key; choice.cat.until = Infinity; }
+      if (choice.mug) choice.mug.tidier = p.key;
       choice.taken = p.key;
       p.poi = choice;
       p.until = Infinity; // set on arrival
-      p.stay = (choice.act === 'nap' ? rand(20, 45) : choice.act === 'pingpong' ? rand(12, 25) : choice.act === 'pet' ? rand(6, 12) : FLOOR_ACTS.includes(choice.act) ? rand(5, 10) : rand(6, 14)) * 1000;
+      p.stay = choice.act === 'tidy' ? 1500 : (choice.act === 'nap' ? rand(20, 45) : choice.act === 'pingpong' ? rand(12, 25) : choice.act === 'pet' ? rand(6, 12) : FLOOR_ACTS.includes(choice.act) ? rand(5, 10) : rand(6, 14)) * 1000;
       p.capSeed = Math.random();
       this.goTo(p, choice);
     }
@@ -3866,9 +3970,25 @@
         default:
           if (!moving && front && st.pose === 'stand') sq = 1 + Math.sin(t * 2 + p.phase) * 0.02; // breathing
       }
+      // Coffee: which hand holds the mug, and the sip (raise, hold, lower).
+      const cup = p.cup;
+      const cupLeft = moving && front && !flip;
+      let sipK = 0;
+      if (cup && cup.sipAt) {
+        const ph = (Date.now() - cup.sipAt) / 1000;
+        if (ph < 1.55) sipK = ph < 0.35 ? ph / 0.35 : ph < 1.1 ? 1 : 1 - (ph - 1.1) / 0.45;
+        sipK = sipK * sipK * (3 - 2 * sipK);
+        if (sipK > 0) { tilt += (cupLeft ? -1 : 1) * 0.035 * sipK; if (ph >= 0.35 && ph < 1.1) sq *= 0.98; }
+      }
       sc *= CHAR_BOOST;
       const H = (img.dh || img.height / SPRITE_RES) * sc, W = (img.dw || img.width / SPRITE_RES) * sc;
       const footY = baseY + (seated ? 4 : 2);
+      const drawCup = () => {
+        const k = H / 40, dir = cupLeft ? -1 : 1;
+        const cx = x + dir * (0.2 * W - 6 * k * sipK), cy = footY + dy - 0.35 * H + 3.5 * k - 4 * k * sipK;
+        this.drawMug(cx, cy, k * 0.95, cup.col, { left: cupLeft, tilt: -dir * 0.26 * sipK, fill: cup.fill, steam: cup.fill > 0 && Date.now() - (cup.got || 0) < 20000 });
+      };
+      if (cup && !front) drawCup();
       c.save();
       c.translate(x, footY + dy);
       c.rotate(tilt);
@@ -3876,6 +3996,7 @@
       c.drawImage(img, -W / 2, -H, W, H);
       if (XMAS) this.santaHat(-H + H * (img.topF || 0), W, t + p.phase);
       c.restore();
+      if (cup && front) drawCup();
       if (s.status === 'error' && p.mode === 'work') {
         c.fillStyle = '#e04848'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
         c.fillText('!', x + W / 2, footY - H + 4);
@@ -4225,11 +4346,12 @@
       const wall = Date.now();
       this.npcShifts(wall);
       for (const [k, p] of this.people) {
+        this.coffeeTick(p, wall);
         if (p.mode === 'wander') {
           if (p.poi && !p.path.length && p.until === Infinity) p.until = wall + p.stay;
           this.wander(p, wall);
         }
-        if (p.path.length) {
+        if (p.path.length && !this.sipping(p, wall)) {
           const n = p.path[0];
           const dx = n.x - p.x, dy = n.y - p.y, d = Math.hypot(dx, dy), v = SPEED * dt;
           if (d > 0.001) { p.walkFace = dx + dy >= 0 ? 'front' : 'back'; p.walkSide = dx - dy >= 0 ? 'right' : 'left'; }
@@ -4264,6 +4386,10 @@
       }
       for (const p of this.people.values()) items.push({ depth: p.x + p.y + 0.01, person: p });
       for (const k of this.cats) items.push({ depth: k.x + k.y, draw: () => this.drawCat(k) });
+      for (const m of this.mugs || []) {
+        const q = this.iso(m.x, m.y, m.z), sz = FLOATWIN ? 1.55 : 1;
+        items.push({ depth: m.depth, draw: () => this.drawMug(q.x, q.y, sz, m.col, { fill: 0, residue: true, shadow: true }) });
+      }
       items.sort((a, b) => a.depth - b.depth);
 
       this.hit = [];
