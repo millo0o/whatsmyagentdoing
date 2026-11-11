@@ -1217,10 +1217,14 @@
       let tree = null;
       if (XMAS) {
         tree = { x: tx, y: ty };
-        add(tx + ty + 0.3, () => this.gptTree(tx, ty));
+        add(tx + ty + 0.3, () => this.paperTree(tx, ty));
         poi(tx - 1.6, ty + 1.2, 'xmas', 'back', { w: 2 });
         poi(tx + 1.4, ty + 1.3, 'xmas', 'back', { w: 2 });
         poi(tx - 0.2, ty + 1.7, 'xmas', 'back', { w: 2 });
+        add(6.6 + ty - 1.0, () => this.snowman(6.6, ty - 1.0, 'santa'));
+        add(10.2 + ty + 1.0, () => this.snowman(10.2, ty + 1.0, 'top'));
+        solid(6.35, ty - 1.25, 0.5, 0.5);
+        solid(9.95, ty + 0.75, 0.5, 0.5);
       } else {
         add(tx + ty, () => this.plant(tx, ty));
       }
@@ -1829,7 +1833,7 @@
 
     drawRoom() {
       if (BARE) return;
-      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.gptWalls(); return; }
+      if (this.plan.paper) { this.paperRoom(); if (XMAS) this.xmasWalls(); return; }
       if (this.pal.cute) { this.villageRoom(); if (XMAS) this.xmasWalls(); return; }
       const { W, D, OW, MR, PY, pp } = this.plan;
       const GX = this.plan.GX || OW;
@@ -2287,8 +2291,8 @@
       // In the village the garland drapes along the fence instead of the ceiling;
       // in the paper office everything takes the milk-tea palette and a pen line.
       const VIL = this.pal.cute, PAPER = !!this.plan.paper, TOP = PAPER ? this.plan.WH + 0.12 : VIL ? 1.0 : WALL_H, SAG = VIL ? 0.1 : 0.2;
-      const cols = PAPER ? ['#e8504a', '#f2c230', '#5aa86a', '#5b8fc9', '#e8504a', '#fff8ea'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
-      const G1 = PAPER ? '#4b8a57' : '#3e9a55', G2 = PAPER ? '#67a66d' : '#5bb86d', BOW = PAPER ? '#d64541' : '#e8413a', KNOT = PAPER ? '#f2c230' : '#ffd23f';
+      const cols = PAPER ? ['#e9b8aa', '#ecc768', '#b8c7b0', '#d9cfe0', '#e38f80', '#faf6ed'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
+      const G1 = PAPER ? '#8bb087' : '#3e9a55', G2 = PAPER ? '#a9c3a0' : '#5bb86d', BOW = PAPER ? '#e38f80' : '#e8413a', KNOT = PAPER ? '#ecc768' : '#ffd23f';
       const pen = 'rgba(112,88,74,.7)';
       const run = (len, at, seed) => {
         const pts = [];
@@ -2315,7 +2319,7 @@
           const q = at(u, z - 0.06);
           const col = cols[(i / 2 + seed) % cols.length];
           const on = Math.sin(t * 2.6 + i * 0.7) > -0.35;
-          if (on) { c.globalAlpha = 0.3; c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y + 2, 6, 0, Math.PI * 2); c.fill(); }
+          if (on) { c.globalAlpha = PAPER ? 0.22 : 0.3; c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y + 2, 6, 0, Math.PI * 2); c.fill(); }
           c.globalAlpha = on ? 1 : 0.35;
           c.fillStyle = col; c.beginPath(); c.ellipse(q.x, q.y + 2, 2.1, 2.9, 0, 0, Math.PI * 2); c.fill();
           if (PAPER) { c.strokeStyle = pen; c.lineWidth = 0.6; c.stroke(); }
@@ -2328,7 +2332,7 @@
       const wreath = (dir, a, z, r) => this.onWall(dir, a, z, (cc) => {
         for (let k = 0; k < 16; k++) {
           const ang = (k / 16) * Math.PI * 2;
-          cc.fillStyle = PAPER ? (k % 2 ? '#3f7d4c' : '#5d9e66') : (k % 2 ? '#2f8a45' : '#4fb565');
+          cc.fillStyle = PAPER ? (k % 2 ? '#7fa67c' : '#9cbc95') : (k % 2 ? '#2f8a45' : '#4fb565');
           cc.beginPath(); cc.arc(Math.cos(ang) * r, Math.sin(ang) * r, r * 0.45, 0, Math.PI * 2); cc.fill();
         }
         for (let k = 0; k < 6; k++) {
@@ -2361,7 +2365,7 @@
     xmasBunting() {
       const PAPER = !!this.plan.paper, VIL = this.pal.cute;
       const pen = 'rgba(112,88,74,.7)';
-      const cols = PAPER ? ['#d64541', '#f2c230', '#3d7d4b', '#d64541', '#e9b53b', '#3d7d4b'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
+      const cols = PAPER ? ['#e9b8aa', '#ecc768', '#b8c7b0', '#d9cfe0', '#e38f80', '#faf6ed'] : ['#ff4d4d', '#ffd23f', '#4db8ff', '#5ee07a', '#ff7ad9', '#b48cff'];
       // MERRY XMAS banner of little flags on the left wall
       const word = 'MERRY XMAS';
       const y0 = 5.6, step = 0.32;
@@ -2372,7 +2376,7 @@
           cc.fillStyle = cols[k % cols.length];
           cc.beginPath(); cc.moveTo(-5, -5); cc.lineTo(5, -5); cc.lineTo(0, 6); cc.closePath(); cc.fill();
           if (PAPER) { cc.strokeStyle = pen; cc.lineWidth = 0.6; cc.stroke(); }
-          cc.fillStyle = '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
+          cc.fillStyle = PAPER ? '#70584a' : '#fff'; cc.font = '800 6px ui-sans-serif, system-ui, sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle';
           cc.fillText(word[k], 0, -1.5);
         });
       }
@@ -2397,12 +2401,12 @@
       if (XMAS) {
         // poinsettia: red star bracts with a gold middle
         for (const [ox, oy] of [[0, -24], [-7, -17], [7, -18]]) {
-          c.fillStyle = this.plan && this.plan.paper ? '#d64541' : '#e02b3a';
+          c.fillStyle = this.plan && this.plan.paper ? '#e38f80' : '#e02b3a';
           for (let i = 0; i < 6; i++) {
             const a = (i / 6) * Math.PI * 2 + sway;
             c.beginPath(); c.ellipse(b.x + ox + Math.cos(a) * 3.5, b.y + oy + Math.sin(a) * 2.2, 3.6, 1.6, a, 0, Math.PI * 2); c.fill();
           }
-          c.fillStyle = this.plan && this.plan.paper ? '#f2c230' : '#ffd34d'; c.beginPath(); c.arc(b.x + ox, b.y + oy, 1.4, 0, Math.PI * 2); c.fill();
+          c.fillStyle = this.plan && this.plan.paper ? '#ecc768' : '#ffd34d'; c.beginPath(); c.arc(b.x + ox, b.y + oy, 1.4, 0, Math.PI * 2); c.fill();
         }
       }
     }
@@ -2820,10 +2824,10 @@
       const base = P(x, y, 0.4);
       // soft warm halo
       const gl = c.createRadialGradient(base.x, base.y - 85, 10, base.x, base.y - 85, 130);
-      gl.addColorStop(0, 'rgba(255,214,120,.38)'); gl.addColorStop(1, 'rgba(255,226,160,0)');
+      gl.addColorStop(0, 'rgba(255,226,160,.30)'); gl.addColorStop(1, 'rgba(255,226,160,0)');
       c.fillStyle = gl; c.beginPath(); c.arc(base.x, base.y - 85, 130, 0, Math.PI * 2); c.fill();
-      gift(x - 1.0, y - 0.7, 0.46, 'rgba(91,143,201,1)', '#f2c230');
-      gift(x + 0.3, y - 1.0, 0.4, 'rgba(79,143,90,1)', '#d64541');
+      gift(x - 1.0, y - 0.7, 0.46, '#d9cfe0', '#e9b8aa');
+      gift(x + 0.3, y - 1.0, 0.4, '#b8c7b0', '#faf6ed');
       // woven basket pot + trunk
       this.box(x - 0.32, y - 0.32, 0, 0.64, 0.64, 0.34, '#e8d8c3', '#d8bd98', '#c9a983');
       const bq = P(x, y + 0.32, 0.17);
@@ -2836,18 +2840,18 @@
       tiers.forEach(([hw, h, up], i) => {
         const bx = base.x, by = base.y - up, top = by - h - 14;
         tri.push({ bx, by, hw, top });
-        c.fillStyle = i % 2 ? '#5d9e66' : '#4b8a57';
+        c.fillStyle = i % 2 ? '#9cbc95' : '#8bb087';
         c.beginPath(); c.moveTo(bx - hw, by);
         for (let k = 0; k <= 9; k++) { const px = bx - hw + (2 * hw) * k / 9; c.quadraticCurveTo(px - hw / 9, by + 7, px, by); }
         c.lineTo(bx + 1.5, top + 2); c.quadraticCurveTo(bx, top - 1, bx - 1.5, top + 2); c.closePath(); c.fill();
         c.strokeStyle = pen; c.lineWidth = 1.2; c.stroke();
         // watercolour bloom: lighter patch on the left, a darker pool on the right
-        c.fillStyle = 'rgba(170,215,160,.42)';
+        c.fillStyle = 'rgba(214,232,200,.45)';
         c.beginPath(); c.ellipse(bx - hw * 0.35, by - h * 0.35, hw * 0.28, h * 0.32, -0.4, 0, Math.PI * 2); c.fill();
-        c.fillStyle = 'rgba(30,80,40,.2)';
+        c.fillStyle = 'rgba(96,130,96,.18)';
         c.beginPath(); c.ellipse(bx + hw * 0.4, by - 6, hw * 0.3, 7, 0, 0, Math.PI * 2); c.fill();
         // a few pen-drawn needle ticks
-        c.strokeStyle = 'rgba(30,70,40,.45)'; c.lineWidth = 0.8;
+        c.strokeStyle = 'rgba(80,110,80,.45)'; c.lineWidth = 0.8;
         for (let k = 0; k < 5; k++) { const fx = bx - hw * 0.7 + rnd(i * 10 + k) * hw * 1.4, fy = by - 4 - rnd(i * 10 + k + 5) * h * 0.6; c.beginPath(); c.moveTo(fx - 2, fy - 2); c.lineTo(fx, fy); c.lineTo(fx + 2, fy - 2); c.stroke(); }
       });
       const at = (i, f, g) => { const q = tri[i]; const w = q.hw * (1 - g) * 0.9; return { x: q.bx - w + 2 * w * f, y: q.by - 4 - (q.by - q.top) * g * 0.85 }; };
@@ -2856,7 +2860,7 @@
         const a = at(i, 0.04, 0.32), b = at(i, 0.96, 0.52), m = at(i, 0.5, 0.12);
         for (let k = 0; k <= 16; k++) {
           const u = k / 16, qx = (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * m.x + u * u * b.x, qy = (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * (m.y + 8) + u * u * b.y;
-          c.fillStyle = k % 3 ? '#f2c230' : '#fff8ea'; c.beginPath(); c.arc(qx, qy, 1.8, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#faf6ed'; c.beginPath(); c.arc(qx, qy, 1.7, 0, Math.PI * 2); c.fill();
           c.strokeStyle = 'rgba(112,88,74,.35)'; c.lineWidth = 0.5; c.stroke();
         }
       }
@@ -2866,13 +2870,13 @@
         for (let k = 0; k < 22 - i * 3; k++, n++) {
           const q = at(i, rnd(n), rnd(n + 999) * 0.9);
           const tw = 0.5 + 0.5 * Math.sin(t * (1.8 + rnd(n + 7) * 2.5) + n);
-          c.globalAlpha = 0.3 + 0.55 * tw; c.fillStyle = '#ffd970'; c.beginPath(); c.arc(q.x, q.y, 3, 0, Math.PI * 2); c.fill();
-          c.globalAlpha = 0.75 + 0.25 * tw; c.fillStyle = '#fffdf2'; c.beginPath(); c.arc(q.x, q.y, 1.1, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 0.2 + 0.45 * tw; c.fillStyle = '#ffe7a3'; c.beginPath(); c.arc(q.x, q.y, 3, 0, Math.PI * 2); c.fill();
+          c.globalAlpha = 0.65 + 0.35 * tw; c.fillStyle = '#fffaf0'; c.beginPath(); c.arc(q.x, q.y, 1.1, 0, Math.PI * 2); c.fill();
         }
       }
       c.globalAlpha = 1;
       // baubles in the palette, pen-outlined, with a paper shine
-      const bcol = ['#d64541', '#f2c230', '#fff8ea', '#d64541', '#5b8fc9', '#f2c230', '#b8323a'];
+      const bcol = ['#e9b8aa', '#e7c66b', '#d9cfe0', '#e38f80', '#faf6ed', '#e7c66b'];
       n = 0;
       for (let i = 0; i < tri.length; i++) {
         const count = 6 - Math.floor(i / 1.5);
@@ -2886,27 +2890,27 @@
       }
       // small coral bows
       const bow = (q, s) => {
-        c.fillStyle = '#d64541'; c.strokeStyle = pen; c.lineWidth = 0.7;
+        c.fillStyle = '#e38f80'; c.strokeStyle = pen; c.lineWidth = 0.7;
         c.beginPath(); c.moveTo(q.x, q.y); c.bezierCurveTo(q.x - 8 * s, q.y - 6 * s, q.x - 9 * s, q.y + 4 * s, q.x, q.y); c.fill(); c.stroke();
         c.beginPath(); c.moveTo(q.x, q.y); c.bezierCurveTo(q.x + 8 * s, q.y - 6 * s, q.x + 9 * s, q.y + 4 * s, q.x, q.y); c.fill(); c.stroke();
-        c.beginPath(); c.moveTo(q.x - 1, q.y); c.lineTo(q.x - 4 * s, q.y + 9 * s); c.moveTo(q.x + 1, q.y); c.lineTo(q.x + 4 * s, q.y + 9 * s); c.strokeStyle = '#d64541'; c.lineWidth = 1.6; c.stroke();
+        c.beginPath(); c.moveTo(q.x - 1, q.y); c.lineTo(q.x - 4 * s, q.y + 9 * s); c.moveTo(q.x + 1, q.y); c.lineTo(q.x + 4 * s, q.y + 9 * s); c.strokeStyle = '#e38f80'; c.lineWidth = 1.6; c.stroke();
       };
       [[0, 0.22, 0.3], [0, 0.78, 0.25], [1, 0.5, 0.42], [2, 0.2, 0.3], [2, 0.8, 0.35], [3, 0.5, 0.32], [4, 0.3, 0.3]].forEach(([i, f, g]) => bow(at(i, f, g), 1 - i * 0.08));
       // paper star: mustard, pen outline, a soft glow and slow twinkle
       const TOP = 126 + 26 + 14, sx = base.x, sy = base.y - TOP - 6, r = 13 + Math.sin(t * 1.6) * 0.8;
       const sg = c.createRadialGradient(sx, sy, 0, sx, sy, 28);
-      sg.addColorStop(0, 'rgba(255,214,110,.8)'); sg.addColorStop(1, 'rgba(255,226,150,0)');
+      sg.addColorStop(0, 'rgba(255,226,150,.6)'); sg.addColorStop(1, 'rgba(255,226,150,0)');
       c.fillStyle = sg; c.beginPath(); c.arc(sx, sy, 28, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#f2c230'; c.beginPath();
+      c.fillStyle = '#ecc768'; c.beginPath();
       for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.48 : r; c.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
       c.closePath(); c.fill(); c.strokeStyle = pen; c.lineWidth = 1.3; c.lineJoin = 'round'; c.stroke();
       c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(sx - 3, sy - 3, 3, 1.8, -0.6, 0, Math.PI * 2); c.fill();
       // presents in front
-      gift(x + 0.45, y + 0.35, 0.48, 'rgba(214,69,65,1)', '#fff8ea');
-      gift(x - 0.6, y + 0.45, 0.42, 'rgba(79,143,90,1)', '#f2c230');
-      gift(x - 0.05, y + 0.75, 0.34, 'rgba(242,194,48,1)', '#d64541');
-      gift(x + 0.95, y - 0.2, 0.36, 'rgba(255,248,234,1)', '#d64541');
-      gift(x - 1.1, y + 0.05, 0.32, 'rgba(91,143,201,1)', '#fff8ea');
+      gift(x + 0.45, y + 0.35, 0.48, '#e9b8aa', '#faf6ed');
+      gift(x - 0.6, y + 0.45, 0.42, '#b8c7b0', '#e38f80');
+      gift(x - 0.05, y + 0.75, 0.34, '#e7c66b', '#faf6ed');
+      gift(x + 0.95, y - 0.2, 0.36, '#faf6ed', '#e38f80');
+      gift(x - 1.1, y + 0.05, 0.32, '#d9cfe0', '#e7c66b');
     }
 
     // ---- Christmas like the reference photos (paper office): a lush, lightly
@@ -3296,11 +3300,11 @@
       const w = Math.max(10, W * 0.42), h = w * 0.8, flop = Math.sin(t * 2) * 1.5;
       const y0 = top + w * 0.12;
       const paper = this.plan && this.plan.paper, pen = 'rgba(112,88,74,.8)';
-      c.fillStyle = paper ? '#d64541' : '#e02b2b';
+      c.fillStyle = paper ? '#e38f80' : '#e02b2b';
       c.beginPath(); c.moveTo(-w / 2, y0); c.quadraticCurveTo(-w * 0.2, y0 - h, w * 0.55 + flop, y0 - h * 0.55); c.lineTo(w / 2, y0); c.closePath(); c.fill();
       c.strokeStyle = paper ? pen : '#9b1414'; c.lineWidth = paper ? 0.9 : 0.7; c.stroke();
       if (paper) { c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(-w * 0.12, y0 - h * 0.42, w * 0.12, h * 0.18, -0.5, 0, Math.PI * 2); c.fill(); }
-      c.fillStyle = paper ? '#fff8ea' : '#ffffff';
+      c.fillStyle = paper ? '#faf6ed' : '#ffffff';
       c.beginPath(); c.ellipse(0, y0, w * 0.58, w * 0.16, 0, 0, Math.PI * 2); c.fill();
       if (paper) { c.strokeStyle = pen; c.lineWidth = 0.8; c.stroke(); }
       c.beginPath(); c.arc(w * 0.55 + flop, y0 - h * 0.55, w * 0.14, 0, Math.PI * 2); c.fill();
@@ -3331,11 +3335,10 @@
     treeSkirt(x, y) {
       const P = (a, b, cc) => this.iso(a, b, cc);
       const ring = (r) => Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * Math.PI * 2; return P(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.01); });
-      if (this.plan && this.plan.paper) return this.gptMat(x, y);
       if (this.plan && this.plan.paper) {
-        this.poly(ring(1.5), 'rgba(214,69,65,1)', 'rgba(112,88,74,.6)', 1);
-        this.poly(ring(1.32), 'rgba(255,248,234,1)', 'rgba(112,88,74,.35)', 0.8);
-        const c = this.ctx; c.fillStyle = 'rgba(214,69,65,.9)';
+        this.poly(ring(1.5), 'rgba(233,184,170,.75)', 'rgba(112,88,74,.5)', 1);
+        this.poly(ring(1.32), 'rgba(250,246,237,1)', 'rgba(112,88,74,.35)', 0.8);
+        const c = this.ctx; c.fillStyle = 'rgba(233,184,170,.9)';
         for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2, q = P(x + Math.cos(a) * 1.1, y + Math.sin(a) * 1.1, 0.01); c.beginPath(); c.arc(q.x, q.y, 1.5, 0, Math.PI * 2); c.fill(); }
         return;
       }
@@ -3357,7 +3360,7 @@
       const paper = this.plan && this.plan.paper;
       const ink = paper ? 'rgba(112,88,74,.8)' : (this.pal.ink || '#5b4032');
       const K = paper
-        ? { snow: '#fffdf8', btn: '#d64541', eye: '#5e4a3e', nose: '#ef8d3a', cheek: '#f2b4ac', scarfA: '#d64541', scarfB: '#4f8f5a', arm: '#8a5e3c', hat: '#4a3a33', band: '#d64541', cone: '#d64541', trim: '#fff8ea' }
+        ? { snow: '#fffdf8', btn: '#e38f80', eye: '#70584a', nose: '#e7a86b', cheek: '#f2c4bc', scarfA: '#e38f80', scarfB: '#9cbc95', arm: '#a07a5a', hat: '#8c7a6e', band: '#e38f80', cone: '#e38f80', trim: '#faf6ed' }
         : { snow: '#ffffff', btn: '#e8413a', eye: '#2a2018', nose: '#f08a3a', cheek: '#f6a8b8', scarfA: '#d42a2a', scarfB: '#2fa36b', arm: '#7a4a2e', hat: '#2a2a2e', band: '#d42a2a', cone: '#d42a2a', trim: '#fff' };
       c.fillStyle = paper ? 'rgba(112,88,74,.1)' : 'rgba(0,0,0,.08)'; c.beginPath(); c.ellipse(b.x, b.y, 18, 7, 0, 0, Math.PI * 2); c.fill();
       const ball = (yy, r) => {
