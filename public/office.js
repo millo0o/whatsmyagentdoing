@@ -3899,7 +3899,7 @@
       const [icon, text] = list[Math.floor((p.capSeed || 0) * list.length) % list.length];
       const c = this.ctx;
       c.save();
-      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.73;
+      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.8;
       c.textBaseline = 'middle';
       c.font = '600 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
       const ICON = 12, tw = c.measureText(text).width;
@@ -4048,7 +4048,7 @@
 
       const hover = this.hoverKey === p.key;
       if (!s.subagent || hover) {
-        pill(this.label(s), pal.text, pal.tagBg, top - 11, p.mode === 'work' || hover ? 1 : 0.7, true);
+        pill(this.label(s), pal.text, pal.tagBg, top - 11, p.mode === 'work' || hover ? 1 : 0.88, true);
       } else if (badge) {
         this.agentBadge(badge, x, top - 11);
       }
