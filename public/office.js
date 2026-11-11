@@ -61,6 +61,42 @@
     vending: '🥤', foosball: '⚽', phone: '📞', pet: '💕', bake: '♨️', bungeo: '🐟', xmas: '🎄',
   };
 
+  // What everyone is up to, shown as a little caption ("🎮 게임 중").
+  // Each visit picks one line at random.
+  const ACT_CAPTION = {
+    coffee: [['☕', '커피 수혈 중'], ['☕', '라떼 마시는 중'], ['🫖', '차 우리는 중']],
+    water: [['💧', '물 마시는 중'], ['💧', '수분 충전 중']],
+    fridge: [['🍎', '간식 찾는 중'], ['🧃', '냉장고 터는 중'], ['🍰', '케이크 몰래 먹는 중']],
+    sink: [['🫧', '컵 씻는 중'], ['🫧', '설거지 중']],
+    stool: [['💬', '수다 떠는 중'], ['🍩', '도넛 먹는 중'], ['☁️', '멍 때리는 중']],
+    couch: [['🛋️', '쉬는 중'], ['📺', '유튜브 보는 중'], ['☁️', '멍 때리는 중']],
+    beanbag: [['🎧', '노래 듣는 중'], ['🎧', '노동요 고르는 중'], ['🌀', '뒹굴뒹굴']],
+    window: WINTER ? [['❄️', '눈 구경 중'], ['☁️', '창밖 보는 중']] : [['☁️', '창밖 보는 중'], ['🌤️', '날씨 구경 중']],
+    read: [['📖', '책 읽는 중'], ['📚', '만화책 보는 중'], ['📖', '공부하는 척']],
+    whiteboard: [['✏️', '낙서하는 중'], ['💡', '아이디어 정리 중'], ['✏️', '그림 그리는 중']],
+    meeting: [['💬', '회의 중'], ['🗣️', '토론 중'], ['😴', '회의 중 졸음']],
+    arcade: [['🎮', '게임 중'], ['🕹️', '최고기록 도전 중'], ['🎮', '보스전 중']],
+    pingpong: [['🏓', '탁구 치는 중'], ['🏓', '스매시 연습 중']],
+    foosball: [['⚽', '축구 게임 중'], ['⚽', '내기 중']],
+    plant: [['🌱', '화분 물 주는 중'], ['🌱', '식물이랑 대화 중']],
+    vending: [['🥤', '음료 뽑는 중'], ['🍫', '과자 고르는 중']],
+    phone: [['📞', '통화 중'], ['📞', '엄마랑 통화 중']],
+    pet: [['💕', '고양이 쓰담 중'], ['🐱', '냥이랑 노는 중']],
+    bake: [['♨️', '붕어빵 굽는 중'], ['🐟', '팥 채우는 중']],
+    bungeo: [['🐟', '붕어빵 사는 중'], ['🐟', '붕어빵 먹는 중'], ['🤤', '붕어빵 기다리는 중']],
+    xmas: [['🎄', '트리 구경 중'], ['🎁', '선물 흔들어보는 중'], ['⭐', '소원 비는 중']],
+    nap: [['💤', '꾸벅꾸벅'], ['😪', '몰래 낮잠 중']],
+    dance: [['🎵', '춤추는 중'], ['🎶', '신나는 중']],
+    stretch: [['🙆', '스트레칭 중'], ['💪', '기지개 켜는 중']],
+    scroll: [['📱', '딴짓 중'], ['📱', '폰 보는 중'], ['🛒', '쇼핑 중']],
+    snack: [['🍪', '간식 먹는 중'], ['🍙', '삼각김밥 먹는 중'], ['🍫', '초콜릿 먹는 중']],
+    hop: [['✨', '신나는 중'], ['🎉', '퇴근 생각 중']],
+    shift: [['💻', '일하는 중'], ['📱', '딴짓 중'], ['🛒', '몰래 쇼핑 중'], ['🎧', '노동요 듣는 중'], ['😪', '졸면서 일하는 중'], ['🍪', '과자 먹으며 일하는 중']],
+    grind: [['🔥', '열일 중'], ['💻', '일하는 중'], ['💪', '야근 중'], ['⌨️', '타닥타닥']],
+  };
+  // Free-floor things to do anywhere (no furniture needed).
+  const FLOOR_ACTS = ['dance', 'stretch', 'scroll', 'snack', 'hop'];
+
   function hash(str) {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -759,6 +795,12 @@
     // ------------------------------------------------------------ sessions → people
 
     update(sessions) {
+      // Extras need the character sheets; run again once they've loaded.
+      this.lastSessions = sessions;
+      if (!CHARS.length && !this.waitSprites) {
+        this.waitSprites = true;
+        spritesReady.then(() => { if (CHARS.length && this.lastSessions) this.update(this.lastSessions); });
+      }
       const working = sessions.filter((s) => WORKING.has(s.status));
       const off = sessions
         .filter((s) => !WORKING.has(s.status))
@@ -942,6 +984,7 @@
         p.desk = d;
         d.npcWorker = p.key;
         p.shiftEnd = now + (isStar ? rand(120, 240) : rand(30, 90)) * 1000;
+        p.capSeed = Math.random();
         this.goTo(p, d.seat);
         room--;
       }
@@ -985,6 +1028,12 @@
           break;
         }
       }
+      // Something to do right where they are: dance, stretch, phone, a snack…
+      for (let k = 0; k < 2; k++) {
+        const fx = rand(1, plan.W - 1), fy = rand(1, plan.D - 1);
+        if (plan.grid.blocked(fx, fy)) continue;
+        weighted.push([{ x: fx, y: fy, act: FLOOR_ACTS[Math.floor(Math.random() * FLOOR_ACTS.length)], face: 'front' }, 1.3]);
+      }
       if (!weighted.length) return;
       let r = Math.random() * weighted.reduce((a, [, w]) => a + w, 0);
       let choice = weighted[0][0];
@@ -994,7 +1043,8 @@
       choice.taken = p.key;
       p.poi = choice;
       p.until = Infinity; // set on arrival
-      p.stay = (choice.act === 'nap' ? rand(25, 60) : choice.act === 'pingpong' ? rand(15, 30) : choice.act === 'pet' ? rand(6, 12) : rand(8, 20)) * 1000;
+      p.stay = (choice.act === 'nap' ? rand(20, 45) : choice.act === 'pingpong' ? rand(12, 25) : choice.act === 'pet' ? rand(6, 12) : FLOOR_ACTS.includes(choice.act) ? rand(5, 10) : rand(6, 14)) * 1000;
+      p.capSeed = Math.random();
       this.goTo(p, choice);
     }
 
@@ -2216,6 +2266,18 @@
         }
         case 'pingpong': case 'foosball': case 'arcade':
           img = Math.sin(t * 3 + p.phase) > 0 ? ch.left : ch.right; dy -= Math.abs(Math.sin(t * 9 + p.phase)) * 2; break;
+        case 'dance': {
+          const b = Math.sin(t * 6 + p.phase);
+          img = b > 0 ? ch.left : ch.right;
+          dy -= Math.abs(b) * 4; tilt = b * 0.14; break;
+        }
+        case 'stretch': {
+          const k = (Math.sin(t * 1.6 + p.phase) + 1) / 2;
+          sq = 1 + k * 0.1; tilt = Math.sin(t * 0.8 + p.phase) * 0.1; break;
+        }
+        case 'hop': dy -= Math.abs(Math.sin(t * 4.5 + p.phase)) * 9; sq = 1 + Math.sin(t * 9 + p.phase) * 0.04; break;
+        case 'snack': dy -= Math.max(0, Math.sin(t * 7 + p.phase)) * 1.5; sq = 1 + Math.sin(t * 7 + p.phase) * 0.025; break;
+        case 'scroll': tilt = 0.1 + Math.sin(t * 0.7 + p.phase) * 0.03; break;
         case 'coffee': case 'water': case 'read': case 'phone': case 'whiteboard':
           tilt = Math.sin(t * 0.9 + p.phase) * 0.05; break;
         default:
@@ -2240,8 +2302,40 @@
       return { x, y: headTop, act: st.act };
     }
 
+    // The little "🎮 게임 중" caption over someone doing something.
+    // Comes and goes so a busy office doesn't turn into a wall of text.
+    caption(p, act, x, y) {
+      if (p.path.length || !act) return null;
+      const s = p.s || {};
+      const key = act === 'type' && p.shift ? (p.charIdx === WORKAHOLIC ? 'grind' : 'shift') : act;
+      const list = ACT_CAPTION[key];
+      if (!list) return null;
+      const t = this.t / 1000;
+      const cyc = (t + p.phase * 4) % 11;
+      if (cyc > 7.5) return null;
+      const [icon, text] = list[Math.floor((p.capSeed || 0) * list.length) % list.length];
+      const c = this.ctx;
+      c.save();
+      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * (s.npc ? 0.92 : 1);
+      c.textBaseline = 'middle';
+      c.font = '700 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
+      const ICON = 12, tw = c.measureText(text).width;
+      const w = 6 + ICON + 3 + tw + 7, h = 15, x0 = x - w / 2, yy = y - 7 - Math.abs(Math.sin(t * 1.6 + p.phase)) * 1;
+      this.roundRect(x0, yy - h / 2, w, h, 7.5, 'rgba(255,250,244,.94)', 'rgba(107,74,58,.55)');
+      const ic = emojiIcon(icon);
+      if (ic) {
+        const k = 10.5 / Math.max(ic.w, ic.h), iw = ic.w * k, ih = ic.h * k;
+        c.drawImage(ic.cv, ic.x, ic.y, ic.w, ic.h, x0 + 6 + (ICON - iw) / 2, yy - ih / 2, iw, ih);
+      }
+      c.textAlign = 'left';
+      c.fillStyle = '#6b4a3a';
+      c.fillText(text, x0 + 6 + ICON + 3, yy + 0.5);
+      c.restore();
+      return yy - h / 2 - 2;
+    }
+
     bubble(p, at) {
-      if (p.s && p.s.npc) return; // extras have no session to label
+      if (p.s && p.s.npc) { this.caption(p, at.act, at.x, at.y - 4); return; } // extras: no label, just what they're doing
       const c = this.ctx;
       const t = this.t / 1000;
       const s = p.s || {};
@@ -2327,6 +2421,9 @@
           c.fillText('!', x, y - 11.5 - jump);
           c.font = font(600, 10);
           top = y - 22 - jump;
+        } else if (p.shift) {
+          const ny = this.caption(p, at.act, x, y);
+          if (ny != null) { top = ny; c.font = font(600, 10); }
         }
       } else if (p.mode === 'wander') {
         const justDone = st === 'done' && Date.now() - (s.lastEventAt || 0) < 3 * 60_000;
@@ -2347,6 +2444,9 @@
           c.globalAlpha = 1;
           c.font = font(600, 10);
           top = y - 20;
+        } else if (at.act && ACT_CAPTION[at.act]) {
+          const ny = this.caption(p, at.act, x, y);
+          if (ny != null) { top = ny; c.font = font(600, 10); }
         } else if (at.act && (ACT_EMOJI[at.act] || (p.poi && p.poi.emoji)) && !p.path.length) {
           const cycle = (t + p.phase * 3) % 9;
           if (cycle < 2.2) {
