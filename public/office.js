@@ -844,6 +844,17 @@
           const key = `npc:${i}`;
           shown.add(key);
           let p = this.people.get(key);
+          // A session that just went away (finished, deleted, taken out) keeps
+          // its character in the office as an extra instead of walking out.
+          const was = !p && [...this.people.values()].find((q) => q.charIdx === i && !shown.has(q.key) && !q.s.npc);
+          if (was) {
+            this.people.delete(was.key);
+            this.release(was);
+            was.key = key;
+            was.s = { key, status: 'done', npc: true, agent: 'claude', title: '' };
+            was.mode = null; was.desk = null; was.shift = false; was.path = [];
+            this.people.set(key, (p = was));
+          }
           if (!p) {
             p = this.newPerson({ key, status: 'done', npc: true, agent: 'claude', title: '' });
             p.charIdx = i;
