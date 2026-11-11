@@ -3678,58 +3678,73 @@
       c.translate(p.x, p.y);
       const CS = FLOATWIN ? 1.5 : 1; // keep cats in proportion with the bigger floating-window characters
       c.scale(k.face * CS, CS);
-      c.fillStyle = this.pal.shadow;
-      c.beginPath(); c.ellipse(0, 0, 8, 3, 0, 0, Math.PI * 2); c.fill();
-      const col = '#e09a4a';
-      c.fillStyle = k.coat === 'calico' ? '#f3ece2' : col;
-      if (walking) {
-        const s = Math.sin(t * 14) * 1.5;
-        c.fillRect(-5, -4, 2, 4 + s); c.fillRect(3, -4, 2, 4 - s);
-      }
+      // A round, chibi cat in the paper style: big head, small body, pen line,
+      // blush and a little ω mouth. Ginger, or calico with soft patches.
       const calico = k.coat === 'calico';
-      const by = walking ? -6 : -4, hy = walking ? -10 : -9;
-      // Being petted: the cat leans into it and its tail sways happily.
-      const purr = k.petBy && !walking ? Math.sin(t * 6) * 0.6 : 0;
-      const body = () => { c.beginPath(); c.ellipse(0, by + purr * 0.3, 7, walking ? 4 : 5, 0, 0, Math.PI * 2); };
-      const head = () => { c.beginPath(); c.arc(6, hy + purr * 0.3, 3.6, 0, Math.PI * 2); };
-      const ears = () => {
-        c.beginPath(); c.moveTo(4, hy - 3); c.lineTo(5, hy - 7); c.lineTo(7, hy - 3.5); c.fill();
-        c.beginPath(); c.moveTo(7, hy - 3.5); c.lineTo(9, hy - 6.5); c.lineTo(9.5, hy - 2); c.fill();
-      };
+      const pen = 'rgba(112,88,74,.9)';
+      const fur = calico ? '#fffaf2' : '#f2c48e', furD = calico ? '#f0b27a' : '#e3a66c';
+      const purr = k.petBy && !walking ? Math.sin(t * 6) * 0.5 : 0;
+      const step = walking ? Math.sin(t * 14) : 0;
+      c.fillStyle = 'rgba(112,88,74,.14)';
+      c.beginPath(); c.ellipse(0, 0, 9, 3.2, 0, 0, Math.PI * 2); c.fill();
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      const outlined = (path, fill) => { path(); c.fillStyle = fill; c.fill(); c.strokeStyle = pen; c.lineWidth = 0.9; c.stroke(); };
+      // tail: a fat curl, pen line under the fur colour
+      const sway = k.petBy ? Math.sin(t * 8) * 3.5 : Math.sin(t * 2.6) * 2.5;
+      const tail = () => { c.beginPath(); c.moveTo(-5, walking ? -6 : -3); c.quadraticCurveTo(-12, -6 + sway * 0.4, -11 + sway * 0.3, -13); c.quadraticCurveTo(-10.5 + sway * 0.3, -15.5, -8.5 + sway * 0.3, -14); };
+      tail(); c.strokeStyle = pen; c.lineWidth = 4.2; c.stroke();
+      tail(); c.strokeStyle = calico ? '#8c7a6e' : furD; c.lineWidth = 2.6; c.stroke();
+      // legs
+      const legs = walking ? [[-4, step], [-1.5, -step], [2.5, -step], [5, step]] : [[-1.5, 0], [3.5, 0]];
+      for (const [lx, s2] of legs) outlined(() => { c.beginPath(); c.ellipse(lx, -1.2 + s2 * 0.6, 1.6, 1.8, 0, 0, Math.PI * 2); }, fur);
+      // body
+      const bx = walking ? 0 : 0.5, by = walking ? -5.5 : -6 + purr * 0.3;
+      const body = () => { c.beginPath(); c.ellipse(bx, by, walking ? 7.5 : 6.2, walking ? 4.6 : 5.6, 0, 0, Math.PI * 2); };
+      outlined(body, fur);
+      c.save(); body(); c.clip();
       if (calico) {
-        // White coat with ginger and black patches, outlined so it shows on light floors.
-        const ink = '#6b4a3a';
-        c.fillStyle = '#fffaf2';
-        body(); c.fill(); c.strokeStyle = ink; c.lineWidth = 0.8; c.stroke();
-        c.save(); body(); c.clip();
-        c.fillStyle = '#e8963f'; c.beginPath(); c.ellipse(-3, by - 3, 4, 3.2, 0.3, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#3a302a'; c.beginPath(); c.ellipse(3, by - 3.5, 3, 2.4, -0.2, 0, Math.PI * 2); c.fill();
-        c.restore();
-        c.fillStyle = '#fffaf2'; head(); c.fill(); c.stroke();
+        c.fillStyle = '#f0b27a'; c.beginPath(); c.ellipse(bx - 3.5, by - 2.5, 3.8, 3, 0.3, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#8c7a6e'; c.beginPath(); c.ellipse(bx + 2.5, by - 3.6, 2.8, 2.2, -0.2, 0, Math.PI * 2); c.fill();
+      } else {
+        c.strokeStyle = 'rgba(214,150,90,.75)'; c.lineWidth = 1.2;
+        for (const sx of [-3, 0, 3]) { c.beginPath(); c.moveTo(bx + sx - 1, by - 5.5); c.quadraticCurveTo(bx + sx, by - 3.5, bx + sx - 0.5, by - 2); c.stroke(); }
+      }
+      c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(bx + 1, by + 2, 3.5, 2, 0, 0, Math.PI * 2); c.fill();
+      c.restore();
+      body(); c.strokeStyle = pen; c.lineWidth = 0.9; c.stroke();
+      // head
+      const hx = walking ? 6.5 : 4.2, hy = walking ? -10.5 : -13.2 + purr * 0.4, R = 5.2;
+      const ear = (ex, dir, col) => outlined(() => { c.beginPath(); c.moveTo(hx + ex - 2.4 * dir, hy - R * 0.55); c.quadraticCurveTo(hx + ex - 0.4 * dir, hy - R - 2.8, hx + ex + 0.6 * dir, hy - R - 2.5); c.quadraticCurveTo(hx + ex + 1.6 * dir, hy - R * 0.9, hx + ex + 2.2 * dir, hy - R * 0.5); c.closePath(); }, col);
+      ear(-2.4, 1, calico ? '#8c7a6e' : fur);
+      ear(2.6, -1, calico ? '#f0b27a' : fur);
+      c.fillStyle = '#f2c4bc';
+      c.beginPath(); c.ellipse(hx - 2.2, hy - R + 0.2, 0.8, 1.3, 0.2, 0, Math.PI * 2); c.ellipse(hx + 2.4, hy - R + 0.2, 0.8, 1.3, -0.2, 0, Math.PI * 2); c.fill();
+      const head = () => { c.beginPath(); c.ellipse(hx, hy, R, R * 0.9, 0, 0, Math.PI * 2); };
+      outlined(head, fur);
+      if (calico) {
         c.save(); head(); c.clip();
-        c.fillStyle = '#3a302a'; c.beginPath(); c.arc(4, hy - 2, 2.4, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#e8963f'; c.beginPath(); c.arc(8.5, hy - 2, 2.2, 0, Math.PI * 2); c.fill();
-        c.restore();
-        c.fillStyle = '#3a302a'; c.beginPath(); c.moveTo(4, hy - 3); c.lineTo(5, hy - 7); c.lineTo(7, hy - 3.5); c.fill();
-        c.fillStyle = '#e8963f'; c.beginPath(); c.moveTo(7, hy - 3.5); c.lineTo(9, hy - 6.5); c.lineTo(9.5, hy - 2); c.fill();
-        c.strokeStyle = '#e8963f';
+        c.fillStyle = '#8c7a6e'; c.beginPath(); c.arc(hx - 3.2, hy - 3, 3, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#f0b27a'; c.beginPath(); c.arc(hx + 3.6, hy - 3.2, 2.8, 0, Math.PI * 2); c.fill();
+        c.restore(); head(); c.strokeStyle = pen; c.lineWidth = 0.9; c.stroke();
       } else {
-        body(); c.fill();
-        head(); c.fill();
-        ears();
-        c.strokeStyle = col;
+        c.strokeStyle = 'rgba(214,150,90,.8)'; c.lineWidth = 1;
+        for (const sx of [-1.2, 0.6]) { c.beginPath(); c.moveTo(hx + sx, hy - R * 0.85); c.lineTo(hx + sx + 0.3, hy - R * 0.45); c.stroke(); }
       }
-      c.lineWidth = 2; c.lineCap = 'round';
-      const sway = k.petBy ? Math.sin(t * 8) * 4 : Math.sin(t * 3) * 3;
-      c.beginPath(); c.moveTo(-6, -6); c.quadraticCurveTo(-12, -8 + sway, -10, -14); c.stroke();
-      c.fillStyle = '#2a2018';
+      // face (looking the way it faces)
+      const fx = hx + 0.8, fy = hy + 0.6;
+      c.fillStyle = '#5e4a3e'; c.strokeStyle = '#5e4a3e';
       if (k.petBy && !walking) {
-        // Happy closed eyes: ^
-        c.lineWidth = 0.8; c.strokeStyle = '#2a2018';
-        c.beginPath(); c.moveTo(6.5, hy - 0.6); c.lineTo(7.4, hy - 1.6); c.lineTo(8.3, hy - 0.6); c.stroke();
+        c.lineWidth = 0.9;
+        for (const ex of [-1.9, 1.9]) { c.beginPath(); c.moveTo(fx + ex - 0.9, fy - 0.2); c.quadraticCurveTo(fx + ex, fy - 1.4, fx + ex + 0.9, fy - 0.2); c.stroke(); }
       } else {
-        c.fillRect(7, hy - 1.5, 1.2, walking ? 1.2 : 0.6);
+        const blink = (t + k.x) % 4 < 0.12;
+        for (const ex of [-1.9, 1.9]) { c.beginPath(); c.ellipse(fx + ex, fy - 0.6, 0.85, blink ? 0.2 : 1.05, 0, 0, Math.PI * 2); c.fill(); }
+        if (!blink) { c.fillStyle = '#fff'; for (const ex of [-1.9, 1.9]) { c.beginPath(); c.arc(fx + ex + 0.3, fy - 1, 0.32, 0, Math.PI * 2); c.fill(); } }
       }
+      c.fillStyle = 'rgba(240,160,150,.55)';
+      c.beginPath(); c.ellipse(fx - 3.3, fy + 0.9, 1.3, 0.8, 0, 0, Math.PI * 2); c.ellipse(fx + 3.3, fy + 0.9, 1.3, 0.8, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#5e4a3e'; c.lineWidth = 0.7;
+      c.beginPath(); c.moveTo(fx - 1, fy + 0.6); c.quadraticCurveTo(fx - 0.5, fy + 1.4, fx, fy + 0.7); c.quadraticCurveTo(fx + 0.5, fy + 1.4, fx + 1, fy + 0.6); c.stroke();
       c.restore();
       // Hearts float up while someone pets it.
       const petter = k.petBy && this.people.get(k.petBy);
@@ -3740,7 +3755,7 @@
         for (let i = 0; i < 2; i++) {
           const f = (t * 0.7 + i / 2) % 1;
           c.globalAlpha = 1 - f;
-          c.fillText('💗', p.x + (i ? 4 : -3) + Math.sin(t * 3 + i) * 2, p.y - (FLOATWIN ? 24 : 16) - f * 14);
+          c.fillText('💗', p.x + (i ? 4 : -3) + Math.sin(t * 3 + i) * 2, p.y - (FLOATWIN ? 32 : 22) - f * 14);
         }
         c.restore();
       }
