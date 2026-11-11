@@ -3845,19 +3845,20 @@
       const [icon, text] = list[Math.floor((p.capSeed || 0) * list.length) % list.length];
       const c = this.ctx;
       c.save();
-      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * (s.npc ? 0.92 : 1);
+      c.globalAlpha = Math.min(1, cyc * 2.5, (7.5 - cyc) * 2.5) * 0.62;
       c.textBaseline = 'middle';
-      c.font = '700 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
+      c.font = '600 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
       const ICON = 12, tw = c.measureText(text).width;
       const w = 6 + ICON + 3 + tw + 7, h = 15, x0 = x - w / 2, yy = y - 7 - Math.abs(Math.sin(t * 1.6 + p.phase)) * 1;
-      this.roundRect(x0, yy - h / 2, w, h, 7.5, 'rgba(255,250,244,.94)', 'rgba(107,74,58,.55)');
+      this.roundRect(x0, yy - h / 2, w, h, 7.5, 'rgba(255,250,244,.9)', null);
+      c.strokeStyle = 'rgba(107,74,58,.22)'; c.lineWidth = 0.8; c.stroke();
       const ic = emojiIcon(icon);
       if (ic) {
         const k = 10.5 / Math.max(ic.w, ic.h), iw = ic.w * k, ih = ic.h * k;
         c.drawImage(ic.cv, ic.x, ic.y, ic.w, ic.h, x0 + 6 + (ICON - iw) / 2, yy - ih / 2, iw, ih);
       }
       c.textAlign = 'left';
-      c.fillStyle = '#6b4a3a';
+      c.fillStyle = '#8f7a6d';
       c.fillText(text, x0 + 6 + ICON + 3, yy + 0.5);
       c.restore();
       return yy - h / 2 - 2;
