@@ -143,6 +143,8 @@ function snapshot(watcher, opts) {
     if (boss) { s.label = 'Claude 도우미'; s.helperOf = boss.key; if (!s.title) s.title = 'Claude가 부탁한 일'; }
     else s.label = 'Codex 실행';
   }
+  // Chats handed over from the ChatGPT app live in an ID-named project folder.
+  for (const s of sessions) if (s.cwd && /[\\/]\.chatgpt-projects[\\/]/.test(s.cwd)) s.project = 'ChatGPT';
   for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; delete s.label; }
   sessions.sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
   return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: summary(sessions, now) };
