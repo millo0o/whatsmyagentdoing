@@ -143,6 +143,15 @@ function snapshot(watcher, opts) {
     if (boss) { s.label = 'Claude 도우미'; s.helperOf = boss.key; if (!s.title) s.title = 'Claude가 부탁한 일'; }
     else s.label = 'Codex 실행';
   }
+  // Claude and Codex always have someone in the office: with no conversation
+  // of their own, a stand-in waits there (idle, no transcript, can't resume).
+  for (const agent of ['claude', 'codex']) {
+    if (sessions.some((s) => s.agent === agent && !s.subagent && !s.exec)) continue;
+    const r = view({ agent, id: 'standby', status: 'idle', title: '대기 중', lastEventAt: now - 6 * 3600_000 }, now, opts);
+    r.project = agent === 'codex' ? 'Codex' : 'Claude';
+    r.standby = true;
+    sessions.push(r);
+  }
   // Chats handed over from the ChatGPT app live in an ID-named project folder.
   for (const s of sessions) if (s.cwd && /[\\/]\.chatgpt-projects[\\/]/.test(s.cwd)) s.project = 'ChatGPT';
   for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; delete s.label; }

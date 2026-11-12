@@ -667,7 +667,7 @@ function timeLabel(s, now) {
 // is expanded, so a folder or session name can't run anything when pasted.
 const shq = (v) => `'${String(v).replace(/'/g, `'\\''`)}'`;
 function resumeCmd(s) {
-  if (s.source === 'magpie') return '';
+  if (s.source === 'magpie' || s.standby) return '';
   if (s.agent === 'omp') return s.resumeCommand || '';
   const cd = s.cwd ? `cd ${shq(s.cwd)} && ` : '';
   if (s.agent === 'claude') return `${cd}claude --resume ${shq(s.id)}`;
@@ -1381,7 +1381,7 @@ function renderDetail(scrollDown) {
       <dt></dt><dd data-time="${esc(s.key)}"></dd>
     </dl>
     ${contextBar(s.context)}
-    <div class="dactions">${resume ? `<button class="copy" data-copy="${esc(resume)}">${L.copy}</button>` : ''}<button class="copy hide-s" data-hide="${esc(s.key)}" title="지운 대화라면 사무실에서 빼요. 다시 대화하면 돌아와요.">사무실에서 빼기</button></div>
+    <div class="dactions">${resume ? `<button class="copy" data-copy="${esc(resume)}">${L.copy}</button>` : ''}${s.standby ? '' : `<button class="copy hide-s" data-hide="${esc(s.key)}" title="지운 대화라면 사무실에서 빼요. 다시 대화하면 돌아와요.">사무실에서 빼기</button>`}</div>
     <div class="side-sec">${esc(L.recent)}</div>
     ${msgs}`;
   // The turn timer ticks on its own (tickTimes), so the panel only redraws when something changed.
