@@ -133,10 +133,12 @@ try { names = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')) || {}; } catch { /
 // local catalog of them (title + last update) in <codex home>/sqlite/codex.db.
 // No transcript is available, so they show as "replying" for a minute after
 // an update, then "done".
-let gptCache = { at: 0, list: [] };
+let gptCache = { at: 0, list: [], today: 0 };
 function chatgptChats(now) {
   if (now - gptCache.at < 5000) return gptCache.list;
   const list = [];
+  const midnight = new Date(now); midnight.setHours(0, 0, 0, 0);
+  const todayIds = new Set();
   try {
     const { DatabaseSync } = require('node:sqlite');
     const home = require('os').homedir();
@@ -148,10 +150,11 @@ function chatgptChats(now) {
         db = new DatabaseSync(f, { readOnly: true });
         const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 8").all((now - 3 * 3600_000) / 1000);
         for (const r of rows) if (!seen.has(r.id)) { seen.add(r.id); list.push({ id: r.id, title: r.title, at: Math.round(r.at * 1000) }); }
+        for (const r of db.prepare("select thread_id id from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at >= ?").all(midnight.getTime() / 1000)) todayIds.add(r.id);
       } catch { /* app not installed or schema changed */ } finally { try { db && db.close(); } catch { /* ignore */ } }
     }
   } catch { /* no node:sqlite on this Node */ }
-  gptCache = { at: now, list };
+  gptCache = { at: now, list, today: todayIds.size };
   return list;
 }
 
@@ -190,7 +193,10 @@ function snapshot(watcher, opts) {
   for (const s of sessions) if (s.cwd && /[\\/]\.chatgpt-projects[\\/]/.test(s.cwd)) s.project = 'ChatGPT';
   for (const s of sessions) if (names[s.key]) { s.folder = s.project; s.project = names[s.key]; s.renamed = true; delete s.label; }
   sessions.sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
-  return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: summary(sessions, now) };
+  const sum = summary(sessions, now);
+  // ChatGPT keeps no turn/token counts locally: just how many chats you had today.
+  if (gptCache.today) { sum.byAgent.chatgpt = { sessions: gptCache.today, chats: gptCache.today, turns: null, tokens: null }; sum.agents += gptCache.today; }
+  return { now, lang: opts.demo ? null : promptLanguage(raw), sessions, summary: sum };
 }
 
 function createServer(watcher, opts, { onShutdown, onRestart } = {}) {

@@ -714,16 +714,16 @@ function renderToday() {
   if (FLOAT) {
     // Always-visible stats in the floating window's top-right corner.
     const el = document.getElementById('floatStats');
-    const by = t && t.byAgent ? Object.entries(t.byAgent).sort((a, b) => b[1].tokens - a[1].tokens) : [];
+    const by = t && t.byAgent ? Object.entries(t.byAgent).sort((a, b) => (b[1].tokens || 0) - (a[1].tokens || 0)) : [];
     el.innerHTML = t && t.turns ? `
       <div class="fs-main"><b>${t.turns}</b> ${esc(L.turnsL)} · <b>${fmtTokens(t.tokens)}</b> ${esc(L.tokensL)} · <b>${t.agents}</b> ${esc(L.agentsL)}</div>
-      ${by.map(([a, v]) => `<div class="fs-row">${agentLogo(a)}<span>${fmtTokens(v.tokens)}</span></div>`).join('')}` : '';
+      ${by.map(([a, v]) => `<div class="fs-row">${agentLogo(a)}<span>${v.tokens == null ? `${v.chats}개 대화` : fmtTokens(v.tokens)}</span></div>`).join('')}` : '';
     el.hidden = !(t && t.turns);
   }
   document.getElementById('todayTokens').textContent = t && t.tokens ? fmtTokens(t.tokens) : '';
   const panel = document.getElementById('todayPanel');
   if (!t || !t.agents) { panel.innerHTML = `<div class="today-note">${esc(L.noUsage)}</div>`; return; }
-  const agents = Object.entries(t.byAgent).sort((a, b) => b[1].turns - a[1].turns || b[1].tokens - a[1].tokens);
+  const agents = Object.entries(t.byAgent).sort((a, b) => (b[1].turns || 0) - (a[1].turns || 0) || (b[1].tokens || 0) - (a[1].tokens || 0));
   const projects = Object.entries(t.projects).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
   panel.innerHTML = `
     <div class="today-big">
@@ -731,7 +731,7 @@ function renderToday() {
       <div><b>${fmtTokens(t.tokens)}</b><span>${esc(L.tokensL)}</span></div>
       <div><b>${t.agents}</b><span>${esc(L.agentsL)}</span></div>
     </div>
-    ${agents.map(([a, v]) => `<div class="today-row">${agentLogo(a)}${esc(AGENT_NAME[a] || a)}<span class="n">${v.turns} ${esc(L.turnsL)} · ${fmtTokens(v.tokens)}</span></div>`).join('')}
+    ${agents.map(([a, v]) => `<div class="today-row">${agentLogo(a)}${esc(AGENT_NAME[a] || a)}<span class="n">${v.tokens == null ? `${v.chats}개 대화 · 토큰 —` : `${v.turns} ${esc(L.turnsL)} · ${fmtTokens(v.tokens)}`}</span></div>`).join('')}
     ${projects.length ? `<div class="today-head">${esc(L.topProjects)}</div>` : ''}
     ${projects.map(([p, n]) => `<div class="today-row">${esc(p)}<span class="n">${n} ${esc(L.turnsL)}</span></div>`).join('')}
     <div class="today-note">${esc(L.summaryNote)}</div>`;
