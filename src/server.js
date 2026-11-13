@@ -157,7 +157,7 @@ function chatgptChats(now) {
       let db;
       try {
         db = new DatabaseSync(f, { readOnly: true });
-        const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 8").all((now - 3 * 3600_000) / 1000);
+        const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 1").all((now - 3 * 3600_000) / 1000);
         for (const r of rows) {
           if (seen.has(r.id)) continue;
           seen.add(r.id); list.push({ id: r.id, title: r.title, at: Math.round(r.at * 1000) });
