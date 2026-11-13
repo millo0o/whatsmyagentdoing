@@ -131,45 +131,18 @@ try { names = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')) || {}; } catch { /
 
 // Conversations in the ChatGPT app: the Codex/ChatGPT desktop app keeps a
 // local catalog of them (title + last update) in <codex home>/sqlite/codex.db.
-// That catalog is account-wide (phone, other computers too), so only chats
-// that were seen replying in this Mac's app (active_chat_turns) are shown.
-// No transcript is available, so they show as "replying" while active, then "done".
-const LOCAL_GPT_FILE = path.join(__dirname, '..', '.local-gpt.json');
-let localGpt = {};
-try { localGpt = JSON.parse(fs.readFileSync(LOCAL_GPT_FILE, 'utf8')) || {}; } catch { /* none yet */ }
-let activeGpt = new Set();
+// The catalog is account-wide and has no device info, so only the main
+// account is used: ~/.codex-work when it exists (the work account), else all.
+// No transcript is available, so they show as "replying" for a minute after
+// an update, then "done".
 function codexDbs() {
   const home = require('os').homedir();
+  const work = path.join(home, '.codex-work', 'sqlite', 'codex.db');
+  if (fs.existsSync(work)) return [work];
   try {
     return fs.readdirSync(home).filter((d) => /^\.codex(-|$)/.test(d)).map((d) => path.join(home, d, 'sqlite', 'codex.db')).filter((f) => fs.existsSync(f));
   } catch { return []; }
 }
-function scanActiveGpt() {
-  const active = new Set();
-  let added = false;
-  try {
-    const { DatabaseSync } = require('node:sqlite');
-    for (const f of codexDbs()) {
-      let db;
-      try {
-        db = new DatabaseSync(f, { readOnly: true });
-        for (const r of db.prepare('select thread_id id from active_chat_turns').all()) {
-          active.add(r.id);
-          if (!localGpt[r.id]) { localGpt[r.id] = Date.now(); added = true; }
-        }
-      } catch { /* no table */ } finally { try { db && db.close(); } catch { /* ignore */ } }
-    }
-  } catch { /* no node:sqlite */ }
-  if (added) {
-    const cut = Date.now() - 30 * 86400_000;
-    for (const k of Object.keys(localGpt)) if (localGpt[k] < cut) delete localGpt[k];
-    try { fs.writeFileSync(LOCAL_GPT_FILE, JSON.stringify(localGpt)); } catch (e) { console.error('local-gpt:', e.message); }
-  }
-  if (added || active.size !== activeGpt.size) gptCache.at = 0;
-  activeGpt = active;
-}
-setInterval(scanActiveGpt, 2000).unref();
-scanActiveGpt();
 
 let gptCache = { at: 0, list: [], today: 0 };
 function chatgptChats(now) {
@@ -184,12 +157,12 @@ function chatgptChats(now) {
       let db;
       try {
         db = new DatabaseSync(f, { readOnly: true });
-        const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 200").all((now - 3 * 3600_000) / 1000);
+        const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 8").all((now - 3 * 3600_000) / 1000);
         for (const r of rows) {
-          if (seen.has(r.id) || !localGpt[r.id] || list.length >= 8) continue;
-          seen.add(r.id); list.push({ id: r.id, title: r.title, at: Math.round(r.at * 1000), active: activeGpt.has(r.id) });
+          if (seen.has(r.id)) continue;
+          seen.add(r.id); list.push({ id: r.id, title: r.title, at: Math.round(r.at * 1000) });
         }
-        for (const r of db.prepare("select thread_id id from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at >= ?").all(midnight.getTime() / 1000)) if (localGpt[r.id]) todayIds.add(r.id);
+        for (const r of db.prepare("select thread_id id from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at >= ?").all(midnight.getTime() / 1000)) todayIds.add(r.id);
       } catch { /* app not installed or schema changed */ } finally { try { db && db.close(); } catch { /* ignore */ } }
     }
   } catch { /* no node:sqlite on this Node */ }
@@ -204,7 +177,7 @@ function snapshot(watcher, opts) {
     && !(s.exec && ['done', 'idle', 'interrupted'].includes(s.status) && now - (s.lastEventAt || s.mtime || 0) > 5 * 60_000));
   const sessions = raw.map((s) => view(s, now, opts));
   for (const g of chatgptChats(now)) {
-    const s = { agent: 'chatgpt', id: g.id, title: g.title, status: g.active || now - g.at < 60_000 ? 'typing' : 'done', explicitLifecycle: true, lastEventAt: g.at };
+    const s = { agent: 'chatgpt', id: g.id, title: g.title, status: now - g.at < 60_000 ? 'typing' : 'done', explicitLifecycle: true, lastEventAt: g.at };
     if (isHidden(s)) continue;
     const v = view(s, now, opts);
     v.project = 'ChatGPT';
