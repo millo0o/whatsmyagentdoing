@@ -10,3 +10,4 @@ assets/chars/
 # Sessions taken out of the office
 .hidden.json
 .names.json
+.local-gpt.json
