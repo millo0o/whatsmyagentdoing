@@ -150,6 +150,7 @@ function snapshot(watcher, opts) {
     const r = view({ agent, id: 'standby', status: 'idle', title: '대기 중', lastEventAt: now - 6 * 3600_000 }, now, opts);
     r.project = agent === 'codex' ? 'Codex' : 'Claude';
     r.standby = true;
+    r.label = r.project;
     sessions.push(r);
   }
   // Chats handed over from the ChatGPT app live in an ID-named project folder.

@@ -666,6 +666,13 @@ function timeLabel(s, now) {
 // Single-quote for POSIX shells: inside '…' nothing ($(), backticks, $VAR)
 // is expanded, so a folder or session name can't run anything when pasted.
 const shq = (v) => `'${String(v).replace(/'/g, `'\\''`)}'`;
+// What to call a session: a name you gave it, else its conversation title,
+// else the folder it runs in.
+function nameOf(s) {
+  if (s.renamed) return s.project;
+  return s.label || (s.title && s.title !== 'None' ? s.title : null) || s.project || AGENT_NAME[s.agent] || s.agent;
+}
+
 function resumeCmd(s) {
   if (s.source === 'magpie' || s.standby) return '';
   if (s.agent === 'omp') return s.resumeCommand || '';
@@ -849,9 +856,9 @@ function onData(data) {
     const needsYou = s.status === 'waiting' || s.status === 'error';
     let alert = null;
     if (!first && before && before !== s.status && (needsYou || (s.status === 'done' && ACTIVE.has(before)))) {
-      alert = s.status === 'done' ? L.doneNote(s.project || s.agent) : `${s.project || s.agent}: ${L[s.status]}`;
+      alert = s.status === 'done' ? L.doneNote(nameOf(s)) : `${nameOf(s)}: ${L[s.status]}`;
     } else if (!first && s.stuck && !wasStuck) {
-      alert = `${s.project || s.agent}: ${L.stuck(s.stuck)}`;
+      alert = `${nameOf(s)}: ${L.stuck(s.stuck)}`;
     }
     if (alert) {
       state.flash.add(s.key);
@@ -995,7 +1002,7 @@ function hideTip() { tipKey = null; tipPinned = false; tip.style.display = 'none
 const officeOpts = {
   compact: PIP,
   onFrame: (renderer) => popout?.drawPreview(renderer),
-  label: (s) => s.label || (s.agent === 'omp' && s.subagent && s.title) || s.project || AGENT_NAME[s.agent] || s.agent,
+  label: (s) => nameOf(s),
   onHover(s, at, click) {
     // In full screen a click opens the agent in the side panel instead of pinning a card.
     if (click && state.full && s) { hideTip(); openDetail(s.key); return; }
@@ -1312,7 +1319,7 @@ function renderSide() {
     return `<div class="side-group">${esc(L[g.key])} · ${items.length}</div>` + items.map((s, i) => {
       const act = s.stuck ? L.stuck(s.stuck) : s.activity || (s.status === 'done' && s.reply) || s.title || '';
       return `<button class="srow${s.subagent ? ' sub' : ''}" data-key="${esc(s.key)}" style="--s:${statusColor(s.status)};--i:${Math.min(i + (g.key === 'working' ? 3 : g.key === 'finished' ? 8 : 0), 14)}">
-        ${agentLogo(s.agent) || '<span></span>'}<span class="nm">${esc(s.label || s.project || AGENT_NAME[s.agent] || s.agent)}</span>
+        ${agentLogo(s.agent) || '<span></span>'}<span class="nm">${esc(nameOf(s))}</span>
         <span class="tm" data-time="${esc(s.key)}"></span>
         <span class="st"><i></i><b>${esc(L[s.status] || s.status)}</b>${act ? `<span>${esc(act)}</span>` : ''}</span></button>`;
     }).join('');
@@ -1357,7 +1364,7 @@ function renderDetail(scrollDown) {
   const now = Date.now() - state.skew;
   const titleEl = document.getElementById('detailTitle');
   if (!titleEl.querySelector('input')) {
-    const th = `${agentLogo(s.agent)}<span class="dname">${esc(s.label || s.project || AGENT_NAME[s.agent] || s.agent)}</span><button class="rename" data-rename="${esc(s.key)}" title="이름 바꾸기">✏️</button>`;
+    const th = `${agentLogo(s.agent)}<span class="dname">${esc(nameOf(s))}</span><button class="rename" data-rename="${esc(s.key)}" title="이름 바꾸기">✏️</button>`;
     if (titleEl.dataset.html !== th) { titleEl.innerHTML = th; titleEl.dataset.html = th; }
   }
   // Fetch again whenever the agent logged something new.
@@ -1372,7 +1379,7 @@ function renderDetail(scrollDown) {
           : `<div class="msg ${m.role}">${esc(m.text)}<span class="at">${esc(hhmm(m.at))}</span></div>`).join('')}</div>`;
   const resume = resumeCmd(s);
   const html = `
-    ${s.title && s.title !== s.project ? `<div class="dtitle">${esc(s.title)}</div>` : ''}
+    ${s.project && s.project !== nameOf(s) ? `<div class="dtitle">📁 ${esc(s.project)}</div>` : ''}
     <div class="dstatus" style="--s:${statusColor(s.status)}"><i></i><b>${esc(L[s.status] || s.status)}</b>${s.activity ? `<span class="act">${esc(s.activity)}</span>` : ''}${s.stuck ? `<span class="stuck">${esc(L.stuck(s.stuck))}</span>` : ''}</div>
     <dl class="dmeta">
       <dt>${esc(L.modelL)}</dt><dd>${esc(s.model || '—')}${s.subagent ? ` · ${esc(L.sub)}` : ''}</dd>
