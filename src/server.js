@@ -129,12 +129,45 @@ const NAMES_FILE = path.join(__dirname, '..', '.names.json');
 let names = {};
 try { names = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')) || {}; } catch { /* none yet */ }
 
+// Conversations in the ChatGPT app: the Codex/ChatGPT desktop app keeps a
+// local catalog of them (title + last update) in <codex home>/sqlite/codex.db.
+// No transcript is available, so they show as "replying" for a minute after
+// an update, then "done".
+let gptCache = { at: 0, list: [] };
+function chatgptChats(now) {
+  if (now - gptCache.at < 5000) return gptCache.list;
+  const list = [];
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    const home = require('os').homedir();
+    const homes = fs.readdirSync(home).filter((d) => /^\.codex(-|$)/.test(d)).map((d) => path.join(home, d, 'sqlite', 'codex.db')).filter((f) => fs.existsSync(f));
+    const seen = new Set();
+    for (const f of homes) {
+      let db;
+      try {
+        db = new DatabaseSync(f, { readOnly: true });
+        const rows = db.prepare("select thread_id id, display_title title, source_updated_at at from local_thread_catalog where source_kind = 'chatgpt' and missing_candidate = 0 and source_updated_at > ? order by source_updated_at desc limit 8").all((now - 3 * 3600_000) / 1000);
+        for (const r of rows) if (!seen.has(r.id)) { seen.add(r.id); list.push({ id: r.id, title: r.title, at: Math.round(r.at * 1000) }); }
+      } catch { /* app not installed or schema changed */ } finally { try { db && db.close(); } catch { /* ignore */ } }
+    }
+  } catch { /* no node:sqlite on this Node */ }
+  gptCache = { at: now, list };
+  return list;
+}
+
 function snapshot(watcher, opts) {
   const now = Date.now();
   // One-off `codex exec` runs leave the office a few minutes after they finish.
   const raw = watcher.sessions().filter((s) => !isHidden(s)
     && !(s.exec && ['done', 'idle', 'interrupted'].includes(s.status) && now - (s.lastEventAt || s.mtime || 0) > 5 * 60_000));
   const sessions = raw.map((s) => view(s, now, opts));
+  for (const g of chatgptChats(now)) {
+    const s = { agent: 'chatgpt', id: g.id, title: g.title, status: now - g.at < 60_000 ? 'typing' : 'done', explicitLifecycle: true, lastEventAt: g.at };
+    if (isHidden(s)) continue;
+    const v = view(s, now, opts);
+    v.project = 'ChatGPT';
+    sessions.push(v);
+  }
   // A `codex exec` run in the same folder as a Claude session is Claude asking
   // Codex for help (a review, a second opinion): call it Claude's helper.
   for (const s of sessions) {
@@ -145,10 +178,10 @@ function snapshot(watcher, opts) {
   }
   // Claude and Codex always have someone in the office: with no conversation
   // of their own, a stand-in waits there (idle, no transcript, can't resume).
-  for (const agent of ['claude', 'codex']) {
+  for (const agent of ['claude', 'codex', 'chatgpt']) {
     if (sessions.some((s) => s.agent === agent && !s.subagent && !s.exec)) continue;
     const r = view({ agent, id: 'standby', status: 'idle', title: '대기 중', lastEventAt: now - 6 * 3600_000 }, now, opts);
-    r.project = agent === 'codex' ? 'Codex' : 'Claude';
+    r.project = { codex: 'Codex', chatgpt: 'ChatGPT' }[agent] || 'Claude';
     r.standby = true;
     r.label = r.project;
     sessions.push(r);
@@ -255,7 +288,8 @@ function createServer(watcher, opts, { onShutdown, onRestart } = {}) {
       // Same custom-header guard as shutdown, so other sites can't trigger it.
       if (req.headers['x-whatsmyagentdoing'] !== 'hide') { res.writeHead(403).end(); return; }
       const key = String(url.searchParams.get('key') || '').slice(0, 300);
-      const s = watcher.sessions().find((x) => `${x.agent}:${x.id}` === key);
+      const s = watcher.sessions().find((x) => `${x.agent}:${x.id}` === key)
+        || chatgptChats(Date.now()).map((g) => ({ agent: 'chatgpt', id: g.id, lastEventAt: g.at })).find((x) => `chatgpt:${x.id}` === key);
       if (!s) { res.writeHead(404).end(); return; }
       hiddenKeys[key] = s.lastEventAt || s.mtime || Date.now();
       try { fs.writeFileSync(HIDDEN_FILE, JSON.stringify(hiddenKeys)); } catch (e) { console.error('hide:', e.message); }
